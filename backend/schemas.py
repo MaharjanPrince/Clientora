@@ -20,12 +20,44 @@ class Token(BaseModel):
 
 
 # User response
-# User response
 class UserResponse(BaseModel):
     id: UUID
+    name: str
     email: EmailStr
     created_at: datetime
     is_active: bool
 
     # This allows Pydantic to read data from SQLAlchemy models
+    model_config = ConfigDict(from_attributes=True)
+
+
+# Contact Creation
+class ContactCreate(BaseModel):
+    name: str
+    email: EmailStr
+    phone_no: int
+
+
+# Contact Response
+class ContactResponse(BaseModel):
+    id: UUID
+    name: str
+    email: EmailStr
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# Note Creation
+class NoteCreation(BaseModel):
+    title: str
+    content: str
+
+
+# Note Response
+class NoteResponse(BaseModel):
+    title: str
+    content: str
+    created_at: datetime
+
     model_config = ConfigDict(from_attributes=True)
