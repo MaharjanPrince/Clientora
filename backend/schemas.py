@@ -56,6 +56,8 @@ class NoteCreation(BaseModel):
 
 # Note Response
 class NoteResponse(BaseModel):
+    id: UUID
+    contact_id: UUID
     title: str
     content: str
     created_at: datetime
