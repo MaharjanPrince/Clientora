@@ -12,7 +12,7 @@ load_dotenv()
 # Config from .env
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 10080  # 7days
 
 
 # 1. Hash Password

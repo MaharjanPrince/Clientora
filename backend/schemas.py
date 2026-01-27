@@ -35,7 +35,15 @@ class UserResponse(BaseModel):
 class ContactCreate(BaseModel):
     name: str
     email: EmailStr
-    phone_no: int
+    phone_no: Optional[str] = None  # making this optional
+    company_name: Optional[str] = None
+
+
+class ContactUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone_no: Optional[str] = None
+    company_name: Optional[str] = None
 
 
 # Contact Response
@@ -43,6 +51,8 @@ class ContactResponse(BaseModel):
     id: UUID
     name: str
     email: EmailStr
+    company_name: Optional[str] = None
+    phone_no: Optional[str] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

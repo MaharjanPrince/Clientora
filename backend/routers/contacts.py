@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -54,6 +54,34 @@ def get_contact(
 
     if not contact:
         raise HTTPException(status_code=404, detail="Contact not found")
+    return contact
+
+
+@router.put("/{contact_id}", response_model=schemas.ContactResponse)
+def update_contact(
+    contact_id: UUID,
+    contact_update: schemas.ContactUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    contact = (
+        db.query(models.Contact)
+        .filter(
+            models.Contact.id == contact_id, models.Contact.user_id == current_user.id
+        )
+        .first()
+    )
+
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+
+    # Update only fields that were provided
+    update_data = contact_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(contact, field, value)
+
+    db.commit()
+    db.refresh(contact)
     return contact
 
 
