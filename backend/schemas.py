@@ -122,3 +122,39 @@ class ContactContext(BaseModel):
     decision_points: Optional[List[str]] = []
     commitments: Optional[List[str]] = []
     next_action: str
+
+
+class StageStats(BaseModel):
+    """Stats for a pipeline stage"""
+    count: int
+    total_value: Decimal
+
+class ContactNeedingFollowup(BaseModel):
+    """Contact that needs attention"""
+    id: str
+    name: str
+    company_name: Optional[str]
+    email: str
+    days_since_contact: int
+    last_note_date: str
+
+class RecentActivity(BaseModel):
+    """Recent activity item"""
+    type: str  # "note_added" or "deal_updated"
+    date: str
+    contact_name: str
+    contact_id: str
+    days_ago: int
+    # Note-specific fields
+    note_title: Optional[str] = None
+    # Deal-specific fields
+    deal_title: Optional[str] = None
+    deal_stage: Optional[str] = None
+    deal_amount: Optional[Decimal] = None
+
+class DashboardResponse(BaseModel):
+    """Complete dashboard data"""
+    total_pipeline_value: Decimal
+    deals_by_stage: Dict[str, StageStats]
+    contacts_needing_followup: List[ContactNeedingFollowup]
+    recent_activity: List[RecentActivity]
