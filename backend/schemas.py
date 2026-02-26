@@ -110,3 +110,15 @@ class PipelineResponse(BaseModel):
     """Full pipeline view with all stages"""
     total_value: Decimal
     deals_by_stage: Dict[str, StageStats]
+
+
+class ContactContext(BaseModel):
+    contact_id: str
+    contact_name: str
+    last_interaction: str
+    days_since_contact: int
+    summary: str
+    last_topic: Optional[str] = None
+    decision_points: Optional[List[str]] = []
+    commitments: Optional[List[str]] = []
+    next_action: str
