@@ -1,5 +1,6 @@
 from datetime import datetime
-from typing import Optional
+from decimal import Decimal
+from typing import Literal, Optional, List, Dict
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -73,3 +74,39 @@ class NoteResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class DealCreate(BaseModel):
+    title: str
+    contact_id: UUID
+    amount: Decimal
+    stage: Literal["lead", "proposal", "negotiation", "won", "lost"] = "lead"
+
+class DealUpdate(BaseModel):
+    title: Optional[str] = None
+    amount: Optional[Decimal] = None
+    stage: Optional[Literal["lead", "proposal", "negotiation", "won", "lost"]] = (
+        None
+    )
+
+class DealResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    contact_id: UUID
+    title: str
+    amount: Decimal
+    stage: str
+    created_at: datetime
+    updated_at: Optional[datetime] = None  # updated_at can be null initially
+
+    model_config = ConfigDict(from_attributes=True)
+
+class StageStats(BaseModel):
+    """Stats for a single pipeline stage"""
+    count: int
+    total_value: Decimal
+    deals: List[DealResponse]
+
+class PipelineResponse(BaseModel):
+    """Full pipeline view with all stages"""
+    total_value: Decimal
+    deals_by_stage: Dict[str, StageStats]
