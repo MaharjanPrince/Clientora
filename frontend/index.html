@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login - meCRM</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Alpine.js -->
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  
+  <!-- Config -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: '#6366f1', light: '#818cf8', dark: '#4f46e5' }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Our JS -->
+  <script src="js/config.js"></script>
+  <script src="js/stores.js"></script>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+  
+  <div x-data="loginPage()" x-init="init()" class="w-full max-w-md">
+    
+    <!-- Logo/Brand -->
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand text-white mb-4">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8 12l2 2 4-4"/>
+        </svg>
+      </div>
+      <h1 class="text-3xl font-bold text-gray-900">meCRM</h1>
+      <p class="text-gray-600 mt-2">Sign in to your account</p>
+    </div>
+    
+    <!-- Login Card -->
+    <div class="bg-white rounded-lg shadow-lg p-8">
+      
+      <!-- Error Message -->
+      <div x-show="error" x-transition class="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+        <span x-text="error"></span>
+      </div>
+      
+      <!-- Login Form -->
+      <form @submit.prevent="handleLogin" x-show="mode === 'login'">
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input 
+              type="email" 
+              x-model="email" 
+              required 
+              placeholder="you@example.com"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
+            />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <input 
+              type="password" 
+              x-model="password" 
+              required 
+              placeholder="••••••••"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
+            />
+          </div>
+        </div>
+        
+        <button 
+          type="submit" 
+          :disabled="loading"
+          class="w-full mt-6 px-4 py-3 bg-brand hover:bg-brand-dark text-white font-semibold rounded-lg shadow transition disabled:opacity-50"
+        >
+          <span x-show="!loading">Sign In</span>
+          <span x-show="loading">Signing in...</span>
+        </button>
+      </form>
+      
+      <!-- Register Form -->
+      <form @submit.prevent="handleRegister" x-show="mode === 'register'" x-cloak>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+            <input 
+              type="text" 
+              x-model="name" 
+              required 
+              placeholder="Jane Doe"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
+            />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input 
+              type="email" 
+              x-model="email" 
+              required 
+              placeholder="you@example.com"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
+            />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <input 
+              type="password" 
+              x-model="password" 
+              required 
+              minlength="8"
+              placeholder="••••••••"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
+            />
+            <p class="text-xs text-gray-500 mt-1">At least 8 characters</p>
+          </div>
+        </div>
+        
+        <button 
+          type="submit" 
+          :disabled="loading"
+          class="w-full mt-6 px-4 py-3 bg-brand hover:bg-brand-dark text-white font-semibold rounded-lg shadow transition disabled:opacity-50"
+        >
+          <span x-show="!loading">Create Account</span>
+          <span x-show="loading">Creating account...</span>
+        </button>
+      </form>
+      
+      <!-- Toggle Login/Register -->
+      <div class="mt-6 text-center text-sm text-gray-600">
+        <template x-if="mode === 'login'">
+          <p>
+            Don't have an account? 
+            <button @click="toggleMode" class="text-brand hover:underline font-medium">
+              Sign up
+            </button>
+          </p>
+        </template>
+        <template x-if="mode === 'register'">
+          <p>
+            Already have an account? 
+            <button @click="toggleMode" class="text-brand hover:underline font-medium">
+              Sign in
+            </button>
+          </p>
+        </template>
+      </div>
+      
+    </div>
+    
+    <!-- Demo Credentials (Remove in production) -->
+    <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
+      <strong>Demo:</strong> Register a new account or login with existing credentials
+    </div>
+    
+  </div>
+  
+  <script>
+    function loginPage() {
+      return {
+        mode: 'login', // 'login' or 'register'
+        email: '',
+        password: '',
+        name: '',
+        loading: false,
+        error: null,
+        
+        init() {
+          // If already logged in, redirect to dashboard
+          if (AuthManager.isAuthenticated()) {
+            window.location.href = 'dashboard.html';
+          }
+        },
+        
+        toggleMode() {
+          this.mode = this.mode === 'login' ? 'register' : 'login';
+          this.error = null;
+          this.email = '';
+          this.password = '';
+          this.name = '';
+        },
+        
+        async handleLogin() {
+          this.loading = true;
+          this.error = null;
+          
+          try {
+            const result = await Alpine.store('auth').login(this.email, this.password);
+            
+            if (result.success) {
+              // Redirect to dashboard
+              window.location.href = 'dashboard.html';
+            } else {
+              this.error = result.error || 'Login failed';
+            }
+          } catch (error) {
+            this.error = error.message || 'Login failed';
+          } finally {
+            this.loading = false;
+          }
+        },
+        
+        async handleRegister() {
+          this.loading = true;
+          this.error = null;
+          
+          try {
+            const result = await Alpine.store('auth').register(
+              this.name, 
+              this.email, 
+              this.password
+            );
+            
+            if (result.success) {
+              // Redirect to dashboard
+              window.location.href = 'dashboard.html';
+            } else {
+              this.error = result.error || 'Registration failed';
+            }
+          } catch (error) {
+            this.error = error.message || 'Registration failed';
+          } finally {
+            this.loading = false;
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    [x-cloak] { display: none !important; }
+  </style>
+  
+</body>
+</html>

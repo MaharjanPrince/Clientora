@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en" x-data x-init="$store.theme.init()" :class="{'dark': $store.theme.dark}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard - meCRM</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  
+  <!-- Alpine.js -->
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  
+  <!-- Config -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: '#6366f1', light: '#818cf8', dark: '#4f46e5' }
+          }
+        }
+      },
+      darkMode: 'class'
+    }
+  </script>
+  
+  <!-- Our JS Files -->
+  <script src="js/config.js"></script>
+  <script src="js/stores.js"></script>
+  
+  <style>
+    [x-cloak] { display: none !important; }
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
+    .dark ::-webkit-scrollbar-thumb { background: #374151; }
+    
+    /* Toast animations */
+    .toast-enter { opacity: 0; transform: translateY(20px); }
+    .toast-enter-active { opacity: 1; transform: translateY(0); transition: all 0.3s; }
+    .toast-leave { opacity: 1; }
+    .toast-leave-active { opacity: 0; transition: opacity 0.2s; }
+  </style>
+</head>
+
+<body 
+  class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen" 
+  x-data="dashboardApp()" 
+  x-init="init()"
+>
+
+  <!-- Toast Notifications -->
+  <div class="fixed top-4 right-4 z-50 space-y-2" aria-live="polite">
+    <template x-for="toast in $store.toast.list" :key="toast.id">
+      <div 
+        x-transition:enter="toast-enter toast-enter-active"
+        x-transition:leave="toast-leave toast-leave-active"
+        :class="{
+          'bg-brand text-white': toast.type === 'success',
+          'bg-red-500 text-white': toast.type === 'error',
+          'bg-blue-500 text-white': toast.type === 'info'
+        }"
+        class="px-4 py-3 rounded-lg shadow-lg flex items-center min-w-[280px]"
+      >
+        <!-- Success Icon -->
+        <svg x-show="toast.type === 'success'" class="w-5 h-5 mr-2" fill="none" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        <!-- Error Icon -->
+        <svg x-show="toast.type === 'error'" class="w-5 h-5 mr-2" fill="none" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+        <!-- Info Icon -->
+        <svg x-show="toast.type === 'info'" class="w-5 h-5 mr-2" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="10" stroke-width="2"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"/>
+        </svg>
+        <span x-text="toast.msg"></span>
+      </div>
+    </template>
+  </div>
+
+  <!-- Sidebar -->
+  <aside 
+    :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" 
+    class="fixed z-30 inset-y-0 left-0 w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transform transition-transform duration-200 ease-in-out flex flex-col lg:translate-x-0"
+  >
+    <!-- Logo -->
+    <div class="flex items-center h-16 px-6 border-b border-gray-200 dark:border-gray-800">
+      <div class="flex items-center text-brand font-bold text-xl">
+        <svg class="w-7 h-7 mr-2" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8 12l2 2 4-4"/>
+        </svg>
+        meCRM
+      </div>
+    </div>
+    
+    <!-- Navigation -->
+    <nav class="flex-1 overflow-y-auto py-4">
+      <ul class="space-y-1 px-3">
+        <li>
+          <a 
+            @click="setPage('dashboard')" 
+            :class="page === 'dashboard' ? 'bg-brand/10 text-brand' : 'hover:bg-gray-100 dark:hover:bg-gray-800'"
+            class="flex items-center px-3 py-2 rounded-lg transition cursor-pointer"
+          >
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7"/>
+              <rect x="14" y="3" width="7" height="7"/>
+              <rect x="14" y="14" width="7" height="7"/>
+              <rect x="3" y="14" width="7" height="7"/>
+            </svg>
+            Dashboard
+          </a>
+        </li>
+        
+        <li>
+          <a 
+            @click="setPage('contacts')" 
+            :class="page === 'contacts' ? 'bg-brand/10 text-brand' : 'hover:bg-gray-100 dark:hover:bg-gray-800'"
+            class="flex items-center px-3 py-2 rounded-lg transition cursor-pointer"
+          >
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 00-3-3.87m-4-12a4 4 0 010 7.75"/>
+            </svg>
+            Contacts
+          </a>
+        </li>
+        
+        <li>
+          <a 
+            @click="setPage('deals')" 
+            :class="page === 'deals' ? 'bg-brand/10 text-brand' : 'hover:bg-gray-100 dark:hover:bg-gray-800'"
+            class="flex items-center px-3 py-2 rounded-lg transition cursor-pointer"
+          >
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="7" width="20" height="14" rx="2"/>
+              <path d="M16 3v4M8 3v4"/>
+            </svg>
+            Deals
+          </a>
+        </li>
+      </ul>
+    </nav>
+    
+    <!-- User Section -->
+    <div class="border-t border-gray-200 dark:border-gray-800 p-4">
+      <!-- Theme Toggle -->
+      <button 
+        @click="$store.theme.toggle()" 
+        class="w-full flex items-center justify-center px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition mb-3"
+      >
+        <svg x-show="!$store.theme.dark" class="w-5 h-5 mr-2" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+        <svg x-show="$store.theme.dark" class="w-5 h-5 mr-2" fill="none" stroke="currentColor">
+          <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+        </svg>
+        <span x-text="$store.theme.dark ? 'Light Mode' : 'Dark Mode'"></span>
+      </button>
+      
+      <!-- User Info -->
+      <div class="flex items-center px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+        <div class="w-8 h-8 rounded-full bg-brand text-white flex items-center justify-center font-semibold text-sm" x-text="$store.auth.user?.name?.charAt(0) || 'U'"></div>
+        <div class="ml-3 flex-1 min-w-0">
+          <p class="text-sm font-medium truncate" x-text="$store.auth.user?.name || 'User'"></p>
+          <p class="text-xs text-gray-500 truncate" x-text="$store.auth.user?.email || ''"></p>
+        </div>
+      </div>
+      
+      <!-- Logout -->
+      <button 
+        @click="logout()" 
+        class="w-full mt-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
+      >
+        Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- Overlay for mobile sidebar -->
+  <div 
+    x-show="sidebarOpen" 
+    @click="sidebarOpen = false" 
+    class="fixed inset-0 z-20 bg-black/30 lg:hidden" 
+    x-transition
+  ></div>
+
+  <!-- Main Content Area -->
+  <div class="lg:pl-64 flex flex-col min-h-screen">
+    
+    <!-- Top Bar -->
+    <header class="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 h-16 px-6 flex items-center shadow-sm">
+      <!-- Mobile Menu Button -->
+      <button 
+        @click="sidebarOpen = !sidebarOpen" 
+        class="lg:hidden mr-4 text-gray-500 hover:text-brand"
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+      
+      <!-- Page Title -->
+      <h1 class="text-xl font-semibold capitalize" x-text="page"></h1>
+      
+      <!-- Spacer -->
+      <div class="flex-1"></div>
+      
+      <!-- Search (optional for now) -->
+      <div class="hidden md:block">
+        <input 
+          type="text" 
+          x-model="search" 
+          placeholder="Search..." 
+          class="px-4 py-2 bg-gray-100 dark:bg-gray-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-brand"
+        />
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <main class="flex-1 p-6">
+      
+      <!-- Dashboard Page -->
+      <div x-show="page === 'dashboard'" x-cloak>
+        <div x-data="dashboardStats()" x-init="init()">
+          
+          <!-- Loading State -->
+          <template x-if="loading">
+            <div class="text-center py-12">
+              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-brand mx-auto"></div>
+              <p class="mt-4 text-gray-500">Loading dashboard...</p>
+            </div>
+          </template>
+          
+          <!-- Error State -->
+          <template x-if="!loading && error">
+            <div class="text-center py-12">
+              <div class="text-red-500 mb-4">
+                <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor">
+                  <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01"/>
+                </svg>
+              </div>
+              <p class="text-gray-700 dark:text-gray-300" x-text="error"></p>
+              <button @click="fetchDashboard()" class="mt-4 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark">
+                Retry
+              </button>
+            </div>
+          </template>
+          
+          <!-- Dashboard Content -->
+          <template x-if="!loading && !error && dashboard">
+            <div>
+              
+              <!-- Pipeline Stats Cards -->
+              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+                
+                <!-- Total Pipeline -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                  <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Pipeline</h3>
+                    <svg class="w-8 h-8 text-brand" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+                    </svg>
+                  </div>
+                  <p class="text-3xl font-bold text-gray-900 dark:text-white" x-text="formatCurrency(dashboard.total_pipeline_value)"></p>
+                  <p class="text-xs text-gray-500 mt-1">Excluding lost deals</p>
+                </div>
+                
+                <!-- Leads -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                  <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Leads</h3>
+                    <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                  </div>
+                  <p class="text-3xl font-bold text-gray-900 dark:text-white" x-text="dashboard.deals_by_stage.lead.count"></p>
+                  <p class="text-xs text-gray-500 mt-1" x-text="formatCurrency(dashboard.deals_by_stage.lead.total_value)"></p>
+                </div>
+                
+                <!-- Proposals -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                  <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Proposals</h3>
+                    <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                  </div>
+                  <p class="text-3xl font-bold text-gray-900 dark:text-white" x-text="dashboard.deals_by_stage.proposal.count"></p>
+                  <p class="text-xs text-gray-500 mt-1" x-text="formatCurrency(dashboard.deals_by_stage.proposal.total_value)"></p>
+                </div>
+                
+                <!-- Won Deals -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                  <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Won</h3>
+                    <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                  </div>
+                  <p class="text-3xl font-bold text-gray-900 dark:text-white" x-text="dashboard.deals_by_stage.won.count"></p>
+                  <p class="text-xs text-gray-500 mt-1" x-text="formatCurrency(dashboard.deals_by_stage.won.total_value)"></p>
+                </div>
+                
+              </div>
+              
+              <!-- Two Column Layout -->
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <!-- Contacts Needing Follow-up -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                  <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold">Contacts Need Attention</h3>
+                    <span class="px-2 py-1 bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 rounded-full text-xs font-medium" x-text="dashboard.contacts_needing_followup.length"></span>
+                  </div>
+                  
+                  <template x-if="dashboard.contacts_needing_followup.length === 0">
+                    <div class="text-center py-8 text-gray-400">
+                      <svg class="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                      <p>All caught up! 🎉</p>
+                    </div>
+                  </template>
+                  
+                  <template x-if="dashboard.contacts_needing_followup.length > 0">
+                    <div class="space-y-3 max-h-96 overflow-y-auto">
+                      <template x-for="contact in dashboard.contacts_needing_followup.slice(0, 10)" :key="contact.id">
+                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition cursor-pointer">
+                          <div class="flex-1 min-w-0">
+                            <p class="font-medium truncate" x-text="contact.name"></p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 truncate" x-text="contact.company_name || contact.email"></p>
+                          </div>
+                          <div class="text-right ml-4">
+                            <span class="text-xs text-red-600 dark:text-red-400 font-medium" x-text="formatRelativeTime(contact.days_since_contact)"></span>
+                          </div>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+                
+                <!-- Recent Activity -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                  <h3 class="text-lg font-semibold mb-4">Recent Activity</h3>
+                  
+                  <template x-if="dashboard.recent_activity.length === 0">
+                    <div class="text-center py-8 text-gray-400">
+                      <p>No recent activity</p>
+                    </div>
+                  </template>
+                  
+                  <template x-if="dashboard.recent_activity.length > 0">
+                    <div class="space-y-3 max-h-96 overflow-y-auto">
+                      <template x-for="activity in dashboard.recent_activity" :key="activity.date + activity.contact_id">
+                        <div class="flex items-start space-x-3">
+                          <!-- Icon -->
+                          <div class="flex-shrink-0">
+                            <template x-if="activity.type === 'note_added'">
+                              <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                                <svg class="w-4 h-4 text-blue-600 dark:text-blue-300" fill="none" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                              </div>
+                            </template>
+                            <template x-if="activity.type === 'deal_updated' || activity.type === 'deal_added'">
+                              <div class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                                <svg class="w-4 h-4 text-green-600 dark:text-green-300" fill="none" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                              </div>
+                            </template>
+                          </div>
+                          
+                          <!-- Content -->
+                          <div class="flex-1 min-w-0">
+                            <template x-if="activity.type === 'note_added'">
+                              <div>
+                                <p class="text-sm">
+                                  <span class="font-medium" x-text="activity.contact_name"></span>
+                                  <span class="text-gray-500"> — </span>
+                                  <span class="text-gray-600 dark:text-gray-400" x-text="activity.note_title"></span>
+                                </p>
+                                <p class="text-xs text-gray-500 mt-1" x-text="activity.date"></p>
+                              </div>
+                            </template>
+                            
+                            <template x-if="activity.type === 'deal_updated' || activity.type === 'deal_added'">
+                              <div>
+                                <p class="text-sm">
+                                  <span class="font-medium" x-text="activity.contact_name"></span>
+                                  <span class="text-gray-500"> — </span>
+                                  <span class="text-gray-600 dark:text-gray-400" x-text="activity.deal_title || 'Deal'"></span>
+                                  <span class="text-brand font-medium ml-1" x-text="formatCurrency(activity.deal_amount)"></span>
+                                </p>
+                                <p class="text-xs text-gray-500 mt-1">
+                                  <span class="capitalize" x-text="activity.deal_stage"></span>
+                                  <span> • </span>
+                                  <span x-text="activity.date"></span>
+                                </p>
+                              </div>
+                            </template>
+                          </div>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+                
+              </div>
+              
+            </div>
+          </template>
+          
+        </div>
+      </div>
+      
+      <!-- Contacts Page -->
+      <div x-show="page === 'contacts'" x-cloak>
+        <div class="text-center py-12">
+          <p class="text-gray-500">Contacts page coming next...</p>
+        </div>
+      </div>
+      
+      <!-- Deals Page -->
+      <div x-show="page === 'deals'" x-cloak>
+        <div class="text-center py-12">
+          <p class="text-gray-500">Deals page coming soon...</p>
+        </div>
+      </div>
+      
+    </main>
+  </div>
+
+  <script>
+    // Dashboard Stats Component
+    document.addEventListener('alpine:init', () => {
+      Alpine.data('dashboardStats', () => ({
+        dashboard: null,
+        loading: true,
+        error: null,
+        
+        async init() {
+          await this.fetchDashboard();
+        },
+        
+        async fetchDashboard() {
+          this.loading = true;
+          this.error = null;
+          
+          try {
+            this.dashboard = await API.getDashboard();
+          } catch (error) {
+            console.error('Failed to load dashboard:', error);
+            this.error = error.message;
+          } finally {
+            this.loading = false;
+          }
+        },
+        
+        formatCurrency(amount) {
+          return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+          }).format(amount);
+        },
+        
+        formatRelativeTime(days) {
+          if (days === 0) return 'Today';
+          if (days === 1) return 'Yesterday';
+          if (days === 999) return 'Never';
+          return `${days} days ago`;
+        }
+      }));
+    });
+    
+    // Main Dashboard App
+    function dashboardApp() {
+      return {
+        page: 'dashboard',
+        sidebarOpen: false,
+        search: '',
+        
+        async init() {
+          // Check authentication
+          AuthManager.requireAuth();
+          
+          // Load user data
+          await Alpine.store('auth').init();
+          
+          // Responsive sidebar
+          this.sidebarOpen = window.innerWidth >= 1024;
+          window.addEventListener('resize', () => {
+            if (window.innerWidth >= 1024) {
+              this.sidebarOpen = true;
+            } else {
+              this.sidebarOpen = false;
+            }
+          });
+        },
+        
+        setPage(pageName) {
+          this.page = pageName;
+          this.search = '';
+          
+          // Close sidebar on mobile
+          if (window.innerWidth < 1024) {
+            this.sidebarOpen = false;
+          }
+        },
+        
+        logout() {
+          if (confirm('Are you sure you want to logout?')) {
+            Alpine.store('auth').logout();
+          }
+        }
+      }
+    }
+  </script>
+
+</body>
+</html>
