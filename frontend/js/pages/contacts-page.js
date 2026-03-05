@@ -89,12 +89,17 @@ function contactsPage() {
         if (this.modalMode === 'create') {
           const c = await API.createContact(this.form);
           this.contacts.unshift(c);
+          // Sync to global store so deals page sees it immediately
+          Alpine.store('data').contacts.unshift(c);
           Alpine.store('toast').success(`${c.name} added!`);
         } else {
           const c = await API.updateContact(this.editingId, this.form);
           const idx = this.contacts.findIndex(x => x.id === this.editingId);
           if (idx !== -1) this.contacts[idx] = c;
           if (this.selectedContact?.id === this.editingId) this.selectedContact = c;
+          // Sync to global store
+          const storeIdx = Alpine.store('data').contacts.findIndex(x => x.id === this.editingId);
+          if (storeIdx !== -1) Alpine.store('data').contacts[storeIdx] = c;
           Alpine.store('toast').success('Contact updated!');
         }
         this.showModal = false;
@@ -119,6 +124,8 @@ function contactsPage() {
         this.contacts = this.contacts.filter(c => c.id !== id);
         if (this.selectedContact?.id === id) this.selectedContact = null;
         this.deleteConfirmId = null;
+        // Sync to global store
+        Alpine.store('data').contacts = Alpine.store('data').contacts.filter(c => c.id !== id);
         Alpine.store('toast').success('Contact deleted.');
       } catch (e) {
         Alpine.store('toast').error(e.message);

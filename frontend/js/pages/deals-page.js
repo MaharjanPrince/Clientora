@@ -2,7 +2,6 @@
 function dealsPage() {
   return {
     deals: [],
-    contacts: [],
     loading: true,
     error: null,
     viewMode: 'kanban', // 'kanban' | 'list'
@@ -66,7 +65,7 @@ function dealsPage() {
     },
 
     async init() {
-      await Promise.all([this.loadDeals(), this.loadContacts()]);
+      await this.loadDeals();
     },
 
     async loadDeals() {
@@ -81,16 +80,12 @@ function dealsPage() {
       }
     },
 
-    async loadContacts() {
-      try {
-        this.contacts = await API.getContacts();
-      } catch (e) {
-        // contacts not critical for deals page load
-      }
+    get contacts() {
+      return (Alpine.store('data').contacts || []).map(c => ({ ...c, id: String(c.id) }));
     },
 
     contactName(contactId) {
-      const c = this.contacts.find(x => x.id === contactId);
+      const c = this.contacts.find(x => String(x.id) === String(contactId));
       return c ? c.name : 'Unknown';
     },
 
@@ -106,7 +101,7 @@ function dealsPage() {
       this.modalMode = 'edit';
       this.form = {
         title: deal.title || '',
-        contact_id: deal.contact_id || '',
+        contact_id: String(deal.contact_id || ''),
         amount: deal.amount || '',
         stage: deal.stage || 'lead'
       };
@@ -126,7 +121,8 @@ function dealsPage() {
       try {
         const payload = {
           ...this.form,
-          amount: parseFloat(this.form.amount)
+          amount: parseFloat(this.form.amount),
+          contact_id: this.form.contact_id  // UUID string — backend expects UUID
         };
         if (this.modalMode === 'create') {
           const d = await API.createDeal(payload);
@@ -215,4 +211,3 @@ function dealsPage() {
     }
   };
 }
-

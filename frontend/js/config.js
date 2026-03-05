@@ -114,7 +114,7 @@ const API = {
 
   // Dashboard
   async getDashboard() {
-    return apiFetch('/dashboard');
+    return apiFetch('/dashboard/');
   },
 
   // Contacts

@@ -1,7 +1,12 @@
 // dashboard-page.js - Dashboard stats component
 function dashboardStats() {
   return {
-    dashboard: null,
+    dashboard: {
+      total_pipeline_value: 0,
+      deals_by_stage: { lead: {count:0, total_value:0}, proposal: {count:0, total_value:0}, negotiation: {count:0, total_value:0}, won: {count:0, total_value:0}, lost: {count:0, total_value:0} },
+      contacts_needing_followup: [],
+      recent_activity: []
+    },
     loading: true,
     error: null,
 
@@ -36,4 +41,3 @@ function dashboardStats() {
     }
   };
 }
-
