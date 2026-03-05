@@ -3,19 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Login - meCRM</title>
-  
+  <title>Sign In - meCRM</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  
+
   <!-- Alpine.js -->
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  
+
   <!-- Config -->
   <script>
     tailwind.config = {
       theme: {
         extend: {
+          fontFamily: { sans: ['DM Sans', 'system-ui', 'sans-serif'] },
           colors: {
             brand: { DEFAULT: '#6366f1', light: '#818cf8', dark: '#4f46e5' }
           }
@@ -23,225 +28,236 @@
       }
     }
   </script>
-  
+
   <!-- Our JS -->
   <script src="js/config.js"></script>
   <script src="js/stores.js"></script>
+
+  <style>
+    [x-cloak] { display: none !important; }
+    body { font-family: 'DM Sans', system-ui, sans-serif; }
+
+    .bg-mesh {
+      background-color: #f0f1ff;
+      background-image:
+        radial-gradient(at 40% 20%, rgba(99,102,241,0.15) 0px, transparent 50%),
+        radial-gradient(at 80% 0%, rgba(139,92,246,0.1) 0px, transparent 50%),
+        radial-gradient(at 0% 50%, rgba(236,72,153,0.08) 0px, transparent 50%),
+        radial-gradient(at 80% 100%, rgba(99,102,241,0.12) 0px, transparent 50%);
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    .float { animation: float 4s ease-in-out infinite; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in { animation: fadeIn 0.4s ease forwards; }
+  </style>
 </head>
 
-<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
-  
-  <div x-data="loginPage()" x-init="init()" class="w-full max-w-md">
-    
-    <!-- Logo/Brand -->
+<body class="bg-mesh min-h-screen flex items-center justify-center p-4">
+
+  <div x-data="loginPage()" x-init="init()" class="w-full max-w-sm fade-in">
+
+    <!-- Logo -->
     <div class="text-center mb-8">
-      <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand text-white mb-4">
-        <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
+      <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-brand text-white mb-4 float shadow-lg shadow-brand/30">
+        <svg viewBox="0 0 24 24" class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="12" cy="12" r="9"/>
           <path stroke-linecap="round" stroke-linejoin="round" d="M8 12l2 2 4-4"/>
         </svg>
       </div>
-      <h1 class="text-3xl font-bold text-gray-900">meCRM</h1>
-      <p class="text-gray-600 mt-2">Sign in to your account</p>
+      <h1 class="text-2xl font-bold text-gray-900">me<span class="text-brand">CRM</span></h1>
+      <p class="text-gray-500 text-sm mt-1">Your personal relationship manager</p>
     </div>
-    
-    <!-- Login Card -->
-    <div class="bg-white rounded-lg shadow-lg p-8">
-      
-      <!-- Error Message -->
-      <div x-show="error" x-transition class="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+
+    <!-- Card -->
+    <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/80 p-8 border border-gray-100">
+
+      <!-- Tab Toggle -->
+      <div class="flex bg-gray-100 rounded-xl p-1 mb-6">
+        <button
+          @click="setMode('login')"
+          :class="mode === 'login' ? 'bg-white text-gray-900 shadow-sm font-semibold' : 'text-gray-500 hover:text-gray-700'"
+          class="flex-1 py-2 text-sm rounded-lg transition-all"
+        >Sign In</button>
+        <button
+          @click="setMode('register')"
+          :class="mode === 'register' ? 'bg-white text-gray-900 shadow-sm font-semibold' : 'text-gray-500 hover:text-gray-700'"
+          class="flex-1 py-2 text-sm rounded-lg transition-all"
+        >Create Account</button>
+      </div>
+
+      <!-- Error -->
+      <div
+        x-show="error"
+        x-transition
+        class="mb-4 px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center gap-2"
+      >
+        <svg viewBox="0 0 24 24" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01"/></svg>
         <span x-text="error"></span>
       </div>
-      
+
       <!-- Login Form -->
-      <form @submit.prevent="handleLogin" x-show="mode === 'login'">
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input 
-              type="email" 
-              x-model="email" 
-              required 
-              placeholder="you@example.com"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
-            />
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input 
-              type="password" 
-              x-model="password" 
-              required 
-              placeholder="••••••••"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
-            />
-          </div>
+      <form @submit.prevent="handleLogin" x-show="mode === 'login'" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Email</label>
+          <input
+            type="email"
+            x-model="email"
+            required
+            autocomplete="email"
+            placeholder="you@example.com"
+            class="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand focus:border-transparent transition bg-gray-50 focus:bg-white"
+          />
         </div>
-        
-        <button 
-          type="submit" 
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Password</label>
+          <input
+            type="password"
+            x-model="password"
+            required
+            autocomplete="current-password"
+            placeholder="••••••••"
+            class="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand focus:border-transparent transition bg-gray-50 focus:bg-white"
+          />
+        </div>
+        <button
+          type="submit"
           :disabled="loading"
-          class="w-full mt-6 px-4 py-3 bg-brand hover:bg-brand-dark text-white font-semibold rounded-lg shadow transition disabled:opacity-50"
+          class="w-full mt-2 px-4 py-3 bg-brand hover:bg-brand-dark text-white font-semibold rounded-xl shadow-sm shadow-brand/20 transition disabled:opacity-60 text-sm"
         >
-          <span x-show="!loading">Sign In</span>
-          <span x-show="loading">Signing in...</span>
+          <span x-show="!loading">Sign In →</span>
+          <span x-show="loading" class="flex items-center justify-center gap-2">
+            <svg viewBox="0 0 24 24" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>
+            Signing in…
+          </span>
         </button>
       </form>
-      
+
       <!-- Register Form -->
-      <form @submit.prevent="handleRegister" x-show="mode === 'register'" x-cloak>
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-            <input 
-              type="text" 
-              x-model="name" 
-              required 
-              placeholder="Jane Doe"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
-            />
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input 
-              type="email" 
-              x-model="email" 
-              required 
-              placeholder="you@example.com"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
-            />
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input 
-              type="password" 
-              x-model="password" 
-              required 
-              minlength="8"
-              placeholder="••••••••"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
-            />
-            <p class="text-xs text-gray-500 mt-1">At least 8 characters</p>
-          </div>
+      <form @submit.prevent="handleRegister" x-show="mode === 'register'" x-cloak class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Full Name</label>
+          <input
+            type="text"
+            x-model="name"
+            required
+            autocomplete="name"
+            placeholder="Jane Doe"
+            class="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand focus:border-transparent transition bg-gray-50 focus:bg-white"
+          />
         </div>
-        
-        <button 
-          type="submit" 
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Email</label>
+          <input
+            type="email"
+            x-model="email"
+            required
+            autocomplete="email"
+            placeholder="you@example.com"
+            class="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand focus:border-transparent transition bg-gray-50 focus:bg-white"
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Password</label>
+          <input
+            type="password"
+            x-model="password"
+            required
+            minlength="8"
+            autocomplete="new-password"
+            placeholder="Min 8 characters"
+            class="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand focus:border-transparent transition bg-gray-50 focus:bg-white"
+          />
+        </div>
+        <button
+          type="submit"
           :disabled="loading"
-          class="w-full mt-6 px-4 py-3 bg-brand hover:bg-brand-dark text-white font-semibold rounded-lg shadow transition disabled:opacity-50"
+          class="w-full mt-2 px-4 py-3 bg-brand hover:bg-brand-dark text-white font-semibold rounded-xl shadow-sm shadow-brand/20 transition disabled:opacity-60 text-sm"
         >
-          <span x-show="!loading">Create Account</span>
-          <span x-show="loading">Creating account...</span>
+          <span x-show="!loading">Create Account →</span>
+          <span x-show="loading" class="flex items-center justify-center gap-2">
+            <svg viewBox="0 0 24 24" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>
+            Creating account…
+          </span>
         </button>
       </form>
-      
-      <!-- Toggle Login/Register -->
-      <div class="mt-6 text-center text-sm text-gray-600">
-        <template x-if="mode === 'login'">
-          <p>
-            Don't have an account? 
-            <button @click="toggleMode" class="text-brand hover:underline font-medium">
-              Sign up
-            </button>
-          </p>
-        </template>
-        <template x-if="mode === 'register'">
-          <p>
-            Already have an account? 
-            <button @click="toggleMode" class="text-brand hover:underline font-medium">
-              Sign in
-            </button>
-          </p>
-        </template>
-      </div>
-      
+
     </div>
-    
-    <!-- Demo Credentials (Remove in production) -->
-    <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
-      <strong>Demo:</strong> Register a new account or login with existing credentials
-    </div>
-    
+
+    <!-- Footer hint -->
+    <p class="text-center text-xs text-gray-400 mt-6">
+      By continuing, you agree to meCRM's terms of service.
+    </p>
+
   </div>
-  
+
   <script>
     function loginPage() {
       return {
-        mode: 'login', // 'login' or 'register'
+        mode: 'login',
         email: '',
         password: '',
         name: '',
         loading: false,
         error: null,
-        
+
         init() {
-          // If already logged in, redirect to dashboard
           if (AuthManager.isAuthenticated()) {
             window.location.href = 'dashboard.html';
           }
         },
-        
-        toggleMode() {
-          this.mode = this.mode === 'login' ? 'register' : 'login';
+
+        setMode(m) {
+          this.mode = m;
           this.error = null;
           this.email = '';
           this.password = '';
           this.name = '';
         },
-        
+
         async handleLogin() {
           this.loading = true;
           this.error = null;
-          
           try {
             const result = await Alpine.store('auth').login(this.email, this.password);
-            
             if (result.success) {
-              // Redirect to dashboard
               window.location.href = 'dashboard.html';
             } else {
-              this.error = result.error || 'Login failed';
+              this.error = result.error || 'Login failed. Check your credentials.';
             }
-          } catch (error) {
-            this.error = error.message || 'Login failed';
+          } catch (e) {
+            this.error = e.message || 'Login failed.';
           } finally {
             this.loading = false;
           }
         },
-        
+
         async handleRegister() {
           this.loading = true;
           this.error = null;
-          
           try {
-            const result = await Alpine.store('auth').register(
-              this.name, 
-              this.email, 
-              this.password
-            );
-            
+            const result = await Alpine.store('auth').register(this.name, this.email, this.password);
             if (result.success) {
-              // Redirect to dashboard
               window.location.href = 'dashboard.html';
             } else {
-              this.error = result.error || 'Registration failed';
+              this.error = result.error || 'Registration failed.';
             }
-          } catch (error) {
-            this.error = error.message || 'Registration failed';
+          } catch (e) {
+            this.error = e.message || 'Registration failed.';
           } finally {
             this.loading = false;
           }
         }
-      }
+      };
     }
   </script>
-  
-  <style>
-    [x-cloak] { display: none !important; }
-  </style>
-  
+
 </body>
 </html>

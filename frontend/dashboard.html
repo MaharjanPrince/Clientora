@@ -4,526 +4,1211 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dashboard - meCRM</title>
-  
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
-  
+
   <!-- Alpine.js -->
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  
+
   <!-- Config -->
   <script>
     tailwind.config = {
       theme: {
         extend: {
+          fontFamily: { sans: ['DM Sans', 'system-ui', 'sans-serif'], mono: ['DM Mono', 'monospace'] },
           colors: {
-            brand: { DEFAULT: '#6366f1', light: '#818cf8', dark: '#4f46e5' }
+            brand: { DEFAULT: '#6366f1', light: '#818cf8', dark: '#4f46e5', 50: '#eef2ff' }
           }
         }
       },
       darkMode: 'class'
     }
   </script>
-  
+
   <!-- Our JS Files -->
   <script src="js/config.js"></script>
   <script src="js/stores.js"></script>
-  
+  <script src="js/components/contacts-table.js"></script>
+  <script src="js/components/contact-details.js"></script>
+  <script src="js/components/dashboard-status.js"></script>
+  <script src="js/pages/dashboard-page.js"></script>
+  <script src="js/pages/contacts-page.js"></script>
+  <script src="js/pages/deals-page.js"></script>
+
+  <!-- Global CSS -->
+  <link rel="stylesheet" href="css/style.css">
+
   <style>
     [x-cloak] { display: none !important; }
-    
-    /* Custom scrollbar */
-    ::-webkit-scrollbar { width: 8px; }
-    ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
+    body { font-family: 'DM Sans', system-ui, sans-serif; }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
     .dark ::-webkit-scrollbar-thumb { background: #374151; }
-    
-    /* Toast animations */
-    .toast-enter { opacity: 0; transform: translateY(20px); }
-    .toast-enter-active { opacity: 1; transform: translateY(0); transition: all 0.3s; }
-    .toast-leave { opacity: 1; }
-    .toast-leave-active { opacity: 0; transition: opacity 0.2s; }
+
+    .stage-pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+    .stage-lead        { background: #fef3c7; color: #92400e; }
+    .stage-proposal    { background: #dbeafe; color: #1e40af; }
+    .stage-negotiation { background: #ede9fe; color: #5b21b6; }
+    .stage-won         { background: #d1fae5; color: #065f46; }
+    .stage-lost        { background: #fee2e2; color: #991b1b; }
+    .dark .stage-lead        { background: rgba(120,53,15,0.3); color: #fcd34d; }
+    .dark .stage-proposal    { background: rgba(30,58,138,0.3); color: #93c5fd; }
+    .dark .stage-negotiation { background: rgba(76,29,149,0.3); color: #c4b5fd; }
+    .dark .stage-won         { background: rgba(6,78,59,0.3); color: #6ee7b7; }
+    .dark .stage-lost        { background: rgba(127,29,29,0.3); color: #fca5a5; }
+
+    .kanban-board { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 16px; align-items: flex-start; }
+    .kanban-col { flex: 0 0 240px; min-width: 240px; }
+    .kanban-col.drag-over { outline: 2px dashed #6366f1; outline-offset: 2px; border-radius: 12px; }
+    .deal-card { cursor: grab; transition: box-shadow 0.15s, transform 0.15s; }
+    .deal-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .deal-card:active { cursor: grabbing; opacity: 0.75; }
+
+    .note-card { border-left: 3px solid #6366f1; }
+    .dark .note-card { border-left-color: #818cf8; }
+
+    .ai-gradient-border { background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899); border-radius: 12px; padding: 1.5px; }
+    .ai-gradient-inner { background: white; border-radius: 10.5px; }
+    .dark .ai-gradient-inner { background: #1f2937; }
+
+    .tab-active { border-bottom: 2px solid #6366f1 !important; color: #6366f1 !important; }
+
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in-up { animation: fadeInUp 0.3s ease forwards; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { animation: spin 0.8s linear infinite; }
+
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .pulse { animation: pulse 1.5s ease-in-out infinite; }
   </style>
 </head>
 
-<body 
-  class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen" 
-  x-data="dashboardApp()" 
+<body
+  class="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 min-h-screen"
+  x-data="appShell()"
   x-init="init()"
 >
 
-  <!-- Toast Notifications -->
-  <div class="fixed top-4 right-4 z-50 space-y-2" aria-live="polite">
+  <!-- ═══════════════════════════════════════════
+       TOAST NOTIFICATIONS
+  ═══════════════════════════════════════════ -->
+  <div class="fixed top-4 right-4 z-[100] space-y-2 pointer-events-none" aria-live="polite">
     <template x-for="toast in $store.toast.list" :key="toast.id">
-      <div 
-        x-transition:enter="toast-enter toast-enter-active"
-        x-transition:leave="toast-leave toast-leave-active"
+      <div
+        x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0 translate-y-3"
+        x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-200"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
         :class="{
           'bg-brand text-white': toast.type === 'success',
           'bg-red-500 text-white': toast.type === 'error',
           'bg-blue-500 text-white': toast.type === 'info'
         }"
-        class="px-4 py-3 rounded-lg shadow-lg flex items-center min-w-[280px]"
+        class="pointer-events-all px-4 py-3 rounded-xl shadow-xl flex items-center gap-2 min-w-[260px] max-w-sm"
       >
-        <!-- Success Icon -->
-        <svg x-show="toast.type === 'success'" class="w-5 h-5 mr-2" fill="none" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-        </svg>
-        <!-- Error Icon -->
-        <svg x-show="toast.type === 'error'" class="w-5 h-5 mr-2" fill="none" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-        </svg>
-        <!-- Info Icon -->
-        <svg x-show="toast.type === 'info'" class="w-5 h-5 mr-2" fill="none" stroke="currentColor">
-          <circle cx="12" cy="12" r="10" stroke-width="2"/>
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"/>
-        </svg>
-        <span x-text="toast.msg"></span>
+        <svg viewBox="0 0 24 24" x-show="toast.type==='success'" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+        <svg viewBox="0 0 24 24" x-show="toast.type==='error'" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        <svg viewBox="0 0 24 24" x-show="toast.type==='info'" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"/></svg>
+        <span class="text-sm font-medium" x-text="toast.msg"></span>
       </div>
     </template>
   </div>
 
-  <!-- Sidebar -->
-  <aside 
-    :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" 
-    class="fixed z-30 inset-y-0 left-0 w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transform transition-transform duration-200 ease-in-out flex flex-col lg:translate-x-0"
+  <!-- ═══════════════════════════════════════════
+       SIDEBAR
+  ═══════════════════════════════════════════ -->
+  <aside
+    :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+    class="fixed z-40 inset-y-0 left-0 w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-transform duration-200 ease-in-out lg:translate-x-0"
   >
     <!-- Logo -->
     <div class="flex items-center h-16 px-6 border-b border-gray-200 dark:border-gray-800">
-      <div class="flex items-center text-brand font-bold text-xl">
-        <svg class="w-7 h-7 mr-2" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <path stroke-linecap="round" stroke-linejoin="round" d="M8 12l2 2 4-4"/>
-        </svg>
-        meCRM
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-brand flex items-center justify-center">
+          <svg viewBox="0 0 24 24" class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12l2 2 4-4"/><circle cx="12" cy="12" r="9" stroke-width="2"/></svg>
+        </div>
+        <span class="font-bold text-lg text-gray-900 dark:text-white">me<span class="text-brand">CRM</span></span>
       </div>
     </div>
-    
-    <!-- Navigation -->
-    <nav class="flex-1 overflow-y-auto py-4">
-      <ul class="space-y-1 px-3">
+
+    <!-- Nav -->
+    <nav class="flex-1 overflow-y-auto py-4 px-3">
+      <p class="px-3 mb-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Menu</p>
+      <ul class="space-y-1">
         <li>
-          <a 
-            @click="setPage('dashboard')" 
-            :class="page === 'dashboard' ? 'bg-brand/10 text-brand' : 'hover:bg-gray-100 dark:hover:bg-gray-800'"
-            class="flex items-center px-3 py-2 rounded-lg transition cursor-pointer"
+          <button
+            @click="setPage('dashboard')"
+            :class="page==='dashboard' ? 'bg-brand/10 text-brand font-semibold' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'"
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm"
           >
-            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="3" width="7" height="7"/>
-              <rect x="14" y="3" width="7" height="7"/>
-              <rect x="14" y="14" width="7" height="7"/>
-              <rect x="3" y="14" width="7" height="7"/>
-            </svg>
+            <svg viewBox="0 0 24 24" class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
             Dashboard
-          </a>
+          </button>
         </li>
-        
         <li>
-          <a 
-            @click="setPage('contacts')" 
-            :class="page === 'contacts' ? 'bg-brand/10 text-brand' : 'hover:bg-gray-100 dark:hover:bg-gray-800'"
-            class="flex items-center px-3 py-2 rounded-lg transition cursor-pointer"
+          <button
+            @click="setPage('contacts')"
+            :class="page==='contacts' ? 'bg-brand/10 text-brand font-semibold' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'"
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm"
           >
-            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 00-3-3.87m-4-12a4 4 0 010 7.75"/>
-            </svg>
+            <svg viewBox="0 0 24 24" class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87m-4-12a4 4 0 010 7.75"/></svg>
             Contacts
-          </a>
+            <span x-show="$store.data.contacts.length > 0" class="ml-auto text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded-full" x-text="$store.data.contacts.length"></span>
+          </button>
         </li>
-        
         <li>
-          <a 
-            @click="setPage('deals')" 
-            :class="page === 'deals' ? 'bg-brand/10 text-brand' : 'hover:bg-gray-100 dark:hover:bg-gray-800'"
-            class="flex items-center px-3 py-2 rounded-lg transition cursor-pointer"
+          <button
+            @click="setPage('deals')"
+            :class="page==='deals' ? 'bg-brand/10 text-brand font-semibold' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'"
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm"
           >
-            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="7" width="20" height="14" rx="2"/>
-              <path d="M16 3v4M8 3v4"/>
-            </svg>
+            <svg viewBox="0 0 24 24" class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
             Deals
-          </a>
+          </button>
         </li>
       </ul>
     </nav>
-    
+
     <!-- User Section -->
-    <div class="border-t border-gray-200 dark:border-gray-800 p-4">
+    <div class="border-t border-gray-200 dark:border-gray-800 p-3 space-y-2">
       <!-- Theme Toggle -->
-      <button 
-        @click="$store.theme.toggle()" 
-        class="w-full flex items-center justify-center px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition mb-3"
+      <button
+        @click="$store.theme.toggle()"
+        class="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition text-sm text-gray-600 dark:text-gray-400"
       >
-        <svg x-show="!$store.theme.dark" class="w-5 h-5 mr-2" fill="none" stroke="currentColor">
-          <circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-        </svg>
-        <svg x-show="$store.theme.dark" class="w-5 h-5 mr-2" fill="none" stroke="currentColor">
-          <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
-        </svg>
+        <svg viewBox="0 0 24 24" x-show="!$store.theme.dark" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        <svg viewBox="0 0 24 24" x-show="$store.theme.dark" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
         <span x-text="$store.theme.dark ? 'Light Mode' : 'Dark Mode'"></span>
       </button>
-      
+
       <!-- User Info -->
-      <div class="flex items-center px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
-        <div class="w-8 h-8 rounded-full bg-brand text-white flex items-center justify-center font-semibold text-sm" x-text="$store.auth.user?.name?.charAt(0) || 'U'"></div>
-        <div class="ml-3 flex-1 min-w-0">
-          <p class="text-sm font-medium truncate" x-text="$store.auth.user?.name || 'User'"></p>
+      <div class="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <div
+          class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs text-white shrink-0"
+          style="background: #6366f1"
+          x-text="$store.auth.user?.name?.charAt(0)?.toUpperCase() || 'U'"
+        ></div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-gray-900 dark:text-white truncate" x-text="$store.auth.user?.name || 'User'"></p>
           <p class="text-xs text-gray-500 truncate" x-text="$store.auth.user?.email || ''"></p>
         </div>
       </div>
-      
+
       <!-- Logout -->
-      <button 
-        @click="logout()" 
-        class="w-full mt-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
+      <button
+        @click="logout()"
+        class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
       >
-        Logout
+        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Sign out
       </button>
     </div>
   </aside>
 
-  <!-- Overlay for mobile sidebar -->
-  <div 
-    x-show="sidebarOpen" 
-    @click="sidebarOpen = false" 
-    class="fixed inset-0 z-20 bg-black/30 lg:hidden" 
-    x-transition
+  <!-- Sidebar overlay (mobile) -->
+  <div
+    x-show="sidebarOpen"
+    @click="sidebarOpen = false"
+    class="fixed inset-0 z-30 bg-black/30 lg:hidden"
+    x-transition:enter="transition-opacity duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition-opacity duration-200"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
   ></div>
 
-  <!-- Main Content Area -->
+  <!-- ═══════════════════════════════════════════
+       MAIN CONTENT
+  ═══════════════════════════════════════════ -->
   <div class="lg:pl-64 flex flex-col min-h-screen">
-    
-    <!-- Top Bar -->
-    <header class="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 h-16 px-6 flex items-center shadow-sm">
-      <!-- Mobile Menu Button -->
-      <button 
-        @click="sidebarOpen = !sidebarOpen" 
-        class="lg:hidden mr-4 text-gray-500 hover:text-brand"
-      >
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
-        </svg>
+
+    <!-- Top Header -->
+    <header class="sticky top-0 z-20 bg-white/90 dark:bg-gray-900/90 backdrop-blur border-b border-gray-200 dark:border-gray-800 h-16 px-4 sm:px-6 flex items-center gap-4 shadow-sm">
+      <!-- Mobile menu toggle -->
+      <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden p-1 text-gray-500 hover:text-brand transition">
+        <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
-      
-      <!-- Page Title -->
-      <h1 class="text-xl font-semibold capitalize" x-text="page"></h1>
-      
-      <!-- Spacer -->
+
+      <!-- Breadcrumb -->
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-gray-400 hidden sm:block">meCRM</span>
+        <svg viewBox="0 0 24 24" class="w-4 h-4 text-gray-300 hidden sm:block" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        <h1 class="text-sm font-semibold text-gray-900 dark:text-white capitalize" x-text="page"></h1>
+      </div>
+
       <div class="flex-1"></div>
-      
-      <!-- Search (optional for now) -->
-      <div class="hidden md:block">
-        <input 
-          type="text" 
-          x-model="search" 
-          placeholder="Search..." 
-          class="px-4 py-2 bg-gray-100 dark:bg-gray-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-brand"
-        />
+
+      <!-- Action button per page -->
+      <div class="flex items-center gap-2">
+        <!-- Contacts: add button in header -->
+        <template x-if="page === 'contacts'">
+          <div></div>
+        </template>
+        <!-- Deals: add button in header -->
+        <template x-if="page === 'deals'">
+          <div></div>
+        </template>
+        <!-- User avatar shortcut -->
+        <div
+          class="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-white font-bold text-xs cursor-default"
+          x-text="$store.auth.user?.name?.charAt(0)?.toUpperCase() || 'U'"
+        ></div>
       </div>
     </header>
 
     <!-- Page Content -->
-    <main class="flex-1 p-6">
-      
-      <!-- Dashboard Page -->
-      <div x-show="page === 'dashboard'" x-cloak>
-        <div x-data="dashboardStats()" x-init="init()">
-          
-          <!-- Loading State -->
-          <template x-if="loading">
-            <div class="text-center py-12">
-              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-brand mx-auto"></div>
-              <p class="mt-4 text-gray-500">Loading dashboard...</p>
+    <main class="flex-1 p-4 sm:p-6">
+
+      <!-- ══════════════════════════════
+           DASHBOARD PAGE
+      ══════════════════════════════ -->
+      <div x-show="page === 'dashboard'" x-cloak x-data="dashboardStats()" x-init="init()">
+
+        <!-- Loading -->
+        <div x-show="loading" class="space-y-6 animate-pulse">
+          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <template x-for="i in 4" :key="i">
+              <div class="bg-white dark:bg-gray-800 rounded-xl p-6 h-28"></div>
+            </template>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="bg-white dark:bg-gray-800 rounded-xl h-72"></div>
+            <div class="bg-white dark:bg-gray-800 rounded-xl h-72"></div>
+          </div>
+        </div>
+
+        <!-- Error -->
+        <div x-show="!loading && error" class="flex flex-col items-center justify-center py-20 text-center">
+          <div class="w-14 h-14 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
+            <svg viewBox="0 0 24 24" class="w-7 h-7 text-red-500" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01"/></svg>
+          </div>
+          <p class="text-gray-600 dark:text-gray-400 mb-4" x-text="error"></p>
+          <button @click="fetchDashboard()" class="px-4 py-2 bg-brand text-white rounded-lg text-sm hover:bg-brand-dark transition">Retry</button>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div x-show="!loading && !error && dashboard" class="space-y-6 fade-in-up">
+
+          <!-- Welcome row -->
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+                Good day, <span x-text="$store.auth.user?.name?.split(' ')[0] || 'there'"></span> 👋
+              </h2>
+              <p class="text-sm text-gray-500 mt-0.5">Here's what's happening with your pipeline.</p>
             </div>
-          </template>
-          
-          <!-- Error State -->
-          <template x-if="!loading && error">
-            <div class="text-center py-12">
-              <div class="text-red-500 mb-4">
-                <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor">
-                  <circle cx="12" cy="12" r="10" stroke-width="2"/>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01"/>
-                </svg>
+            <button @click="fetchDashboard()" class="p-2 text-gray-400 hover:text-brand transition rounded-lg hover:bg-brand/5" title="Refresh">
+              <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            </button>
+          </div>
+
+          <!-- Stats Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+
+            <!-- Total Pipeline -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 hover:shadow-md transition">
+              <div class="flex items-start justify-between mb-3">
+                <div class="w-10 h-10 rounded-lg bg-brand/10 flex items-center justify-center">
+                  <svg viewBox="0 0 24 24" class="w-5 h-5 text-brand" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                </div>
+                <span class="text-xs text-gray-400 font-medium">Pipeline</span>
               </div>
-              <p class="text-gray-700 dark:text-gray-300" x-text="error"></p>
-              <button @click="fetchDashboard()" class="mt-4 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark">
-                Retry
+              <p class="text-2xl font-bold text-gray-900 dark:text-white font-mono" x-text="formatCurrency(dashboard.total_pipeline_value)"></p>
+              <p class="text-xs text-gray-500 mt-1">Excl. lost deals</p>
+            </div>
+
+            <!-- Leads -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 hover:shadow-md transition">
+              <div class="flex items-start justify-between mb-3">
+                <div class="w-10 h-10 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-yellow-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </div>
+                <span class="text-xs text-yellow-600 dark:text-yellow-400 font-medium">Leads</span>
+              </div>
+              <p class="text-2xl font-bold text-gray-900 dark:text-white" x-text="dashboard.deals_by_stage?.lead?.count ?? 0"></p>
+              <p class="text-xs text-gray-500 mt-1 font-mono" x-text="formatCurrency(dashboard.deals_by_stage?.lead?.total_value ?? 0)"></p>
+            </div>
+
+            <!-- Proposals -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 hover:shadow-md transition">
+              <div class="flex items-start justify-between mb-3">
+                <div class="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                </div>
+                <span class="text-xs text-blue-600 dark:text-blue-400 font-medium">Proposals</span>
+              </div>
+              <p class="text-2xl font-bold text-gray-900 dark:text-white" x-text="dashboard.deals_by_stage?.proposal?.count ?? 0"></p>
+              <p class="text-xs text-gray-500 mt-1 font-mono" x-text="formatCurrency(dashboard.deals_by_stage?.proposal?.total_value ?? 0)"></p>
+            </div>
+
+            <!-- Won -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 hover:shadow-md transition">
+              <div class="flex items-start justify-between mb-3">
+                <div class="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <span class="text-xs text-green-600 dark:text-green-400 font-medium">Won</span>
+              </div>
+              <p class="text-2xl font-bold text-gray-900 dark:text-white" x-text="dashboard.deals_by_stage?.won?.count ?? 0"></p>
+              <p class="text-xs text-gray-500 mt-1 font-mono" x-text="formatCurrency(dashboard.deals_by_stage?.won?.total_value ?? 0)"></p>
+            </div>
+
+          </div>
+
+          <!-- Two Column -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+            <!-- Contacts Needing Follow-up -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+              <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+                <div class="flex items-center gap-2">
+                  <svg viewBox="0 0 24 24" class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  <h3 class="font-semibold text-gray-900 dark:text-white text-sm">Needs Attention</h3>
+                </div>
+                <span
+                  class="px-2 py-0.5 rounded-full text-xs font-semibold"
+                  :class="dashboard.contacts_needing_followup?.length > 0 ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' : 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'"
+                  x-text="dashboard.contacts_needing_followup?.length ?? 0"
+                ></span>
+              </div>
+
+              <div class="p-4">
+                <template x-if="!dashboard.contacts_needing_followup?.length">
+                  <div class="text-center py-8">
+                    <div class="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-2">
+                      <svg viewBox="0 0 24 24" class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    </div>
+                    <p class="text-sm text-gray-500">All caught up! 🎉</p>
+                  </div>
+                </template>
+
+                <template x-if="dashboard.contacts_needing_followup?.length > 0">
+                  <div class="space-y-2 max-h-72 overflow-y-auto pr-1">
+                    <template x-for="contact in dashboard.contacts_needing_followup.slice(0,10)" :key="contact.id">
+                      <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition group cursor-pointer"
+                           @click="$dispatch('open-contact', { id: contact.id }); setPage('contacts')">
+                        <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+                             style="background: #6366f1"
+                             x-text="contact.name?.charAt(0)?.toUpperCase() || '?'"></div>
+                        <div class="flex-1 min-w-0">
+                          <p class="text-sm font-medium text-gray-900 dark:text-white truncate" x-text="contact.name"></p>
+                          <p class="text-xs text-gray-500 truncate" x-text="contact.company_name || contact.email"></p>
+                        </div>
+                        <span class="text-xs font-medium text-red-500 dark:text-red-400 whitespace-nowrap" x-text="formatRelativeTime(contact.days_since_contact)"></span>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+              <div class="flex items-center gap-2 px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+                <svg viewBox="0 0 24 24" class="w-4 h-4 text-brand" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                <h3 class="font-semibold text-gray-900 dark:text-white text-sm">Recent Activity</h3>
+              </div>
+
+              <div class="p-4">
+                <template x-if="!dashboard.recent_activity?.length">
+                  <div class="text-center py-8">
+                    <p class="text-sm text-gray-400">No recent activity yet.</p>
+                  </div>
+                </template>
+
+                <template x-if="dashboard.recent_activity?.length > 0">
+                  <div class="space-y-3 max-h-72 overflow-y-auto pr-1">
+                    <template x-for="(activity, idx) in dashboard.recent_activity" :key="idx">
+                      <div class="flex items-start gap-3">
+                        <!-- Icon -->
+                        <div
+                          class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+                          :class="activity.type === 'note_added' ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-green-100 dark:bg-green-900/30'"
+                        >
+                          <template x-if="activity.type === 'note_added'">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                          </template>
+                          <template x-if="activity.type !== 'note_added'">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                          </template>
+                        </div>
+                        <!-- Text -->
+                        <div class="flex-1 min-w-0">
+                          <p class="text-sm text-gray-900 dark:text-gray-100">
+                            <span class="font-medium" x-text="activity.contact_name"></span>
+                            <span class="text-gray-500">
+                              <template x-if="activity.type === 'note_added'"> — <span x-text="activity.note_title || 'Note added'"></span></template>
+                              <template x-if="activity.type !== 'note_added'"> — <span x-text="activity.deal_title || 'Deal'"></span></template>
+                            </span>
+                            <template x-if="activity.deal_amount">
+                              <span class="text-brand font-medium font-mono text-xs ml-1" x-text="formatCurrency(activity.deal_amount)"></span>
+                            </template>
+                          </p>
+                          <p class="text-xs text-gray-400 mt-0.5">
+                            <template x-if="activity.deal_stage">
+                              <span>
+                                <span :class="'stage-pill stage-' + activity.deal_stage" x-text="activity.deal_stage"></span>
+                                <span class="mx-1">·</span>
+                              </span>
+                            </template>
+                            <span x-text="activity.date"></span>
+                          </p>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════
+           CONTACTS PAGE
+      ══════════════════════════════ -->
+      <div x-show="page === 'contacts'" x-cloak x-data="contactsPage()" x-init="init(); $nextTick(() => { window.addEventListener('open-contact', async (e) => { await $nextTick(); const c = contacts.find(x => x.id === e.detail.id); if (c) selectContact(c); }); })">
+
+        <!-- Header row -->
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+          <div>
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white">Contacts</h2>
+            <p class="text-sm text-gray-500 mt-0.5" x-text="`${filteredContacts.length} contact${filteredContacts.length !== 1 ? 's' : ''}`"></p>
+          </div>
+          <div class="sm:ml-auto flex items-center gap-2">
+            <!-- Search -->
+            <div class="relative">
+              <svg viewBox="0 0 24 24" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35"/></svg>
+              <input
+                type="text"
+                x-model="search"
+                placeholder="Search contacts…"
+                class="pl-9 pr-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-brand focus:border-transparent w-48 sm:w-56"
+              />
+            </div>
+            <!-- Add button -->
+            <button
+              @click="openCreateModal()"
+              class="flex items-center gap-2 px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand-dark transition shadow-sm"
+            >
+              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+              Add Contact
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading -->
+        <div x-show="loading" class="space-y-3">
+          <template x-for="i in 5" :key="i">
+            <div class="bg-white dark:bg-gray-800 rounded-xl h-16 animate-pulse"></div>
+          </template>
+        </div>
+
+        <!-- Error -->
+        <div x-show="!loading && error" class="text-center py-16">
+          <p class="text-gray-500 mb-3" x-text="error"></p>
+          <button @click="loadContacts()" class="px-4 py-2 bg-brand text-white rounded-lg text-sm">Retry</button>
+        </div>
+
+        <!-- Main: list + detail panel -->
+        <div x-show="!loading && !error" class="flex gap-4" style="min-height: 500px;">
+
+          <!-- Contacts List -->
+          <div :class="selectedContact ? 'w-80 shrink-0 flex flex-col' : 'flex flex-col w-full'">
+
+            <!-- Empty state -->
+            <template x-if="filteredContacts.length === 0 && !search">
+              <div class="flex flex-col items-center justify-center py-20 text-center">
+                <div class="w-16 h-16 rounded-2xl bg-brand/10 flex items-center justify-center mb-4">
+                  <svg viewBox="0 0 24 24" class="w-8 h-8 text-brand" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87m-4-12a4 4 0 010 7.75"/></svg>
+                </div>
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white mb-1">No contacts yet</h3>
+                <p class="text-sm text-gray-500 mb-4">Add your first contact to get started.</p>
+                <button @click="openCreateModal()" class="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark transition">Add Contact</button>
+              </div>
+            </template>
+
+            <!-- No search results -->
+            <template x-if="filteredContacts.length === 0 && search">
+              <div class="text-center py-16">
+                <p class="text-sm text-gray-500">No contacts matching "<span x-text="search"></span>"</p>
+              </div>
+            </template>
+
+            <!-- Contact rows -->
+            <div class="space-y-2">
+              <template x-for="contact in filteredContacts" :key="contact.id">
+                <div
+                  @click="selectContact(contact)"
+                  :class="selectedContact?.id === contact.id ? 'ring-2 ring-brand bg-brand/5 dark:bg-brand/10' : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+                  class="flex items-center gap-3 p-4 rounded-xl border border-gray-100 dark:border-gray-700 cursor-pointer transition group"
+                >
+                  <!-- Avatar -->
+                  <div
+                    class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
+                    :style="'background:' + getAvatarColor(contact.name)"
+                    x-text="getInitials(contact.name)"
+                  ></div>
+                  <!-- Info -->
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white truncate" x-text="contact.name"></p>
+                    <p class="text-xs text-gray-500 truncate" x-text="contact.company_name || contact.email"></p>
+                  </div>
+                  <!-- Actions -->
+                  <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition" @click.stop>
+                    <button
+                      @click="openEditModal(contact)"
+                      class="p-1.5 rounded-lg text-gray-400 hover:text-brand hover:bg-brand/10 transition"
+                      title="Edit"
+                    >
+                      <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    </button>
+                    <button
+                      @click="confirmDelete(contact.id)"
+                      class="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                      title="Delete"
+                    >
+                      <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+          </div>
+
+          <!-- Contact Detail Panel -->
+          <div x-show="selectedContact" class="flex-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col" style="min-height: 500px;">
+
+            <template x-if="selectedContact">
+              <div class="flex flex-col h-full">
+                <!-- Detail header -->
+                <div class="flex items-start gap-4 p-5 border-b border-gray-100 dark:border-gray-700">
+                  <div
+                    class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-base shrink-0"
+                    :style="'background:' + getAvatarColor(selectedContact.name)"
+                    x-text="getInitials(selectedContact.name)"
+                  ></div>
+                  <div class="flex-1 min-w-0">
+                    <h3 class="text-base font-bold text-gray-900 dark:text-white" x-text="selectedContact.name"></h3>
+                    <p class="text-sm text-gray-500" x-text="selectedContact.company_name || ''"></p>
+                    <div class="flex flex-wrap gap-3 mt-2 text-xs text-gray-500">
+                      <span x-show="selectedContact.email" class="flex items-center gap-1">
+                        <svg viewBox="0 0 24 24" class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        <span x-text="selectedContact.email"></span>
+                      </span>
+                      <span x-show="selectedContact.phone_no" class="flex items-center gap-1">
+                        <svg viewBox="0 0 24 24" class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 8.8a19.79 19.79 0 01-3.07-8.63A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.09a16 16 0 006 6l.36-.36a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0120 15h0z"/></svg>
+                        <span x-text="selectedContact.phone_no"></span>
+                      </span>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 shrink-0">
+                    <button @click="openEditModal(selectedContact)" class="p-2 rounded-lg text-gray-400 hover:text-brand hover:bg-brand/10 transition" title="Edit">
+                      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    </button>
+                    <button @click="selectedContact = null" class="p-2 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition" title="Back to list">
+                      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="flex border-b border-gray-100 dark:border-gray-700 px-4">
+                  <button
+                    @click="switchTab('notes')"
+                    :class="activeTab === 'notes' ? 'tab-active' : 'border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                    class="px-3 py-3 text-sm font-medium transition -mb-px"
+                  >Notes</button>
+                  <button
+                    @click="switchTab('ai')"
+                    :class="activeTab === 'ai' ? 'tab-active' : 'border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+                    class="px-3 py-3 text-sm font-medium transition -mb-px flex items-center gap-1.5 -mb-px"
+                  >
+                    <span>AI Context</span>
+                    <span class="text-[10px] font-bold bg-brand text-white px-1.5 py-0.5 rounded-full">AI</span>
+                  </button>
+                </div>
+
+                <!-- Tab content -->
+                <div class="flex-1 overflow-y-auto p-4">
+
+                  <!-- Notes Tab -->
+                  <div x-show="activeTab === 'notes'">
+
+                    <!-- Add note toggle -->
+                    <div class="mb-4">
+                      <button
+                        x-show="!showNoteForm"
+                        @click="showNoteForm = true"
+                        class="w-full flex items-center gap-2 px-4 py-3 bg-gray-50 dark:bg-gray-700 hover:bg-brand/5 dark:hover:bg-brand/10 border-2 border-dashed border-gray-200 dark:border-gray-600 hover:border-brand/30 rounded-xl text-sm text-gray-500 hover:text-brand transition"
+                      >
+                        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        Add a note
+                      </button>
+
+                      <!-- Note form -->
+                      <div x-show="showNoteForm" x-transition class="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 space-y-3">
+                        <input
+                          type="text"
+                          x-model="noteForm.title"
+                          placeholder="Note title…"
+                          class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand focus:border-transparent"
+                        />
+                        <textarea
+                          x-model="noteForm.content"
+                          placeholder="Write your note…"
+                          rows="4"
+                          class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm resize-none focus:ring-2 focus:ring-brand focus:border-transparent"
+                        ></textarea>
+                        <div class="flex gap-2">
+                          <button
+                            @click="addNote()"
+                            :disabled="savingNote || !noteForm.title.trim() || !noteForm.content.trim()"
+                            class="flex-1 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand-dark transition disabled:opacity-50"
+                          >
+                            <span x-show="!savingNote">Save Note</span>
+                            <span x-show="savingNote">Saving…</span>
+                          </button>
+                          <button @click="showNoteForm = false; noteForm = {title:'', content:''}" class="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg transition">Cancel</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Loading notes -->
+                    <div x-show="notesLoading" class="space-y-3">
+                      <template x-for="i in 3" :key="i">
+                        <div class="h-16 bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                      </template>
+                    </div>
+
+                    <!-- Empty notes -->
+                    <template x-if="!notesLoading && notes.length === 0">
+                      <div class="text-center py-10">
+                        <svg viewBox="0 0 24 24" class="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        <p class="text-sm text-gray-400">No notes yet. Add your first one above.</p>
+                      </div>
+                    </template>
+
+                    <!-- Notes list -->
+                    <div class="space-y-3">
+                      <template x-for="note in notes" :key="note.id">
+                        <div class="note-card pl-3 pr-4 py-3 bg-gray-50 dark:bg-gray-700/50 rounded-r-lg rounded-l-none">
+                          <div class="flex items-start justify-between gap-2 mb-1">
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white" x-text="note.title"></p>
+                            <span class="text-xs text-gray-400 whitespace-nowrap shrink-0" x-text="formatDate(note.created_at)"></span>
+                          </div>
+                          <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap" x-text="note.content"></p>
+                        </div>
+                      </template>
+                    </div>
+
+                  </div>
+
+                  <!-- AI Context Tab -->
+                  <div x-show="activeTab === 'ai'">
+
+                    <!-- Loading -->
+                    <div x-show="aiLoading" class="flex flex-col items-center py-12 gap-3">
+                      <div class="w-10 h-10 rounded-full border-2 border-brand border-t-transparent animate-spin"></div>
+                      <p class="text-sm text-gray-500">Analyzing conversation history…</p>
+                    </div>
+
+                    <!-- AI Result -->
+                    <template x-if="!aiLoading && aiContext">
+                      <div class="space-y-4 fade-in-up">
+                        <!-- Summary -->
+                        <div class="ai-gradient-border">
+                          <div class="ai-gradient-inner p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                              <span class="text-xs font-bold text-brand uppercase tracking-wider">AI Summary</span>
+                            </div>
+                            <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed" x-text="aiContext.summary"></p>
+                          </div>
+                        </div>
+
+                        <!-- Meta info -->
+                        <div class="grid grid-cols-2 gap-3">
+                          <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                            <p class="text-xs text-gray-500 mb-1">Last Interaction</p>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white" x-text="aiContext.last_interaction"></p>
+                          </div>
+                          <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                            <p class="text-xs text-gray-500 mb-1">Days Since Contact</p>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white" x-text="aiContext.days_since_contact + ' days'"></p>
+                          </div>
+                        </div>
+
+                        <!-- Last Topic -->
+                        <div x-show="aiContext.last_topic" class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
+                          <p class="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">Last Topic</p>
+                          <p class="text-sm text-gray-700 dark:text-gray-300" x-text="aiContext.last_topic"></p>
+                        </div>
+
+                        <!-- Decision Points -->
+                        <div x-show="aiContext.decision_points?.length">
+                          <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Decision Points</p>
+                          <ul class="space-y-1">
+                            <template x-for="(dp, i) in aiContext.decision_points" :key="i">
+                              <li class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
+                                <span x-text="dp"></span>
+                              </li>
+                            </template>
+                          </ul>
+                        </div>
+
+                        <!-- Commitments -->
+                        <div x-show="aiContext.commitments?.length">
+                          <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Your Commitments</p>
+                          <ul class="space-y-1">
+                            <template x-for="(c, i) in aiContext.commitments" :key="i">
+                              <li class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0"></span>
+                                <span x-text="c"></span>
+                              </li>
+                            </template>
+                          </ul>
+                        </div>
+
+                        <!-- Next Action -->
+                        <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                          <p class="text-xs font-semibold text-green-600 dark:text-green-400 mb-1">→ Next Action</p>
+                          <p class="text-sm font-medium text-gray-900 dark:text-white" x-text="aiContext.next_action"></p>
+                        </div>
+
+                        <button @click="loadAIContext()" class="w-full py-2 text-xs text-brand hover:underline">Refresh analysis</button>
+                      </div>
+                    </template>
+
+                    <!-- No AI context / no notes -->
+                    <template x-if="!aiLoading && !aiContext">
+                      <div class="text-center py-12">
+                        <div class="w-14 h-14 rounded-2xl bg-brand/10 flex items-center justify-center mx-auto mb-3">
+                          <svg viewBox="0 0 24 24" class="w-7 h-7 text-brand" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+                        </div>
+                        <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">AI Context Analysis</h4>
+                        <p class="text-xs text-gray-500 mb-4">Add notes first, then let AI summarize the relationship and suggest next steps.</p>
+                        <button @click="loadAIContext()" class="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark transition">
+                          Generate Analysis
+                        </button>
+                      </div>
+                    </template>
+
+                  </div>
+
+                </div>
+              </div>
+            </template>
+
+          </div>
+
+        </div>
+
+        <!-- Contact Create/Edit Modal -->
+        <div
+          x-show="showModal"
+          x-transition:enter="transition ease-out duration-200"
+          x-transition:enter-start="opacity-0"
+          x-transition:enter-end="opacity-100"
+          x-transition:leave="transition ease-in duration-150"
+          x-transition:leave-start="opacity-100"
+          x-transition:leave-end="opacity-0"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          @click.self="closeModal()"
+        >
+          <div
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100"
+            class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6"
+          >
+            <div class="flex items-center justify-between mb-5">
+              <h3 class="text-base font-bold text-gray-900 dark:text-white" x-text="modalMode === 'create' ? 'Add Contact' : 'Edit Contact'"></h3>
+              <button @click="closeModal()" class="p-1 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
             </div>
+
+            <!-- Form error -->
+            <div x-show="formError" class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300" x-text="formError"></div>
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Full Name *</label>
+                <input type="text" x-model="form.name" required placeholder="Jane Doe"
+                  class="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand focus:border-transparent transition" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Email *</label>
+                <input type="email" x-model="form.email" required placeholder="jane@company.com"
+                  class="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand focus:border-transparent transition" />
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Phone</label>
+                  <input type="text" x-model="form.phone_no" placeholder="+1 (555) 000-0000"
+                    class="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand focus:border-transparent transition" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Company</label>
+                  <input type="text" x-model="form.company_name" placeholder="Acme Inc."
+                    class="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand focus:border-transparent transition" />
+                </div>
+              </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+              <button @click="closeModal()" class="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition">Cancel</button>
+              <button
+                @click="saveContact()"
+                :disabled="saving || !form.name.trim() || !form.email.trim()"
+                class="flex-1 py-2.5 text-sm font-medium text-white bg-brand hover:bg-brand-dark rounded-lg transition disabled:opacity-50 shadow-sm"
+              >
+                <span x-show="!saving" x-text="modalMode === 'create' ? 'Add Contact' : 'Save Changes'"></span>
+                <span x-show="saving">Saving…</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delete Confirm Modal -->
+        <div
+          x-show="deleteConfirmId"
+          x-transition:enter="transition ease-out duration-150"
+          x-transition:enter-start="opacity-0"
+          x-transition:enter-end="opacity-100"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+        >
+          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+            <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
+              <svg viewBox="0 0 24 24" class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </div>
+            <h3 class="text-base font-bold text-gray-900 dark:text-white mb-1">Delete Contact?</h3>
+            <p class="text-sm text-gray-500 mb-5">This will permanently delete the contact and all their notes.</p>
+            <div class="flex gap-3">
+              <button @click="cancelDelete()" class="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition">Cancel</button>
+              <button @click="deleteContact(deleteConfirmId)" class="flex-1 py-2.5 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition">Delete</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ══════════════════════════════
+           DEALS PAGE
+      ══════════════════════════════ -->
+      <div x-show="page === 'deals'" x-cloak x-data="dealsPage()" x-init="init()">
+
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+          <div>
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white">Deals</h2>
+            <p class="text-sm text-gray-500 mt-0.5">
+              Pipeline: <span class="font-semibold text-brand font-mono" x-text="formatCurrency(totalPipeline)"></span>
+              <span class="mx-1.5 text-gray-300">·</span>
+              Won: <span class="font-semibold text-green-600 font-mono" x-text="formatCurrency(wonTotal)"></span>
+            </p>
+          </div>
+          <div class="sm:ml-auto flex items-center gap-2">
+            <!-- View toggle -->
+            <div class="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 gap-1">
+              <button @click="viewMode = 'kanban'" :class="viewMode === 'kanban' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'" class="p-1.5 rounded-md transition" title="Kanban view">
+                <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+              </button>
+              <button @click="viewMode = 'list'" :class="viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'" class="p-1.5 rounded-md transition" title="List view">
+                <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+              </button>
+            </div>
+            <button
+              @click="openCreateModal()"
+              class="flex items-center gap-2 px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand-dark transition shadow-sm"
+            >
+              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+              Add Deal
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading -->
+        <div x-show="loading" class="flex gap-4 overflow-hidden">
+          <template x-for="i in 4" :key="i">
+            <div class="flex-1 bg-white dark:bg-gray-800 rounded-xl h-48 animate-pulse"></div>
           </template>
-          
-          <!-- Dashboard Content -->
-          <template x-if="!loading && !error && dashboard">
-            <div>
-              
-              <!-- Pipeline Stats Cards -->
-              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-                
-                <!-- Total Pipeline -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-                  <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Pipeline</h3>
-                    <svg class="w-8 h-8 text-brand" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
-                    </svg>
-                  </div>
-                  <p class="text-3xl font-bold text-gray-900 dark:text-white" x-text="formatCurrency(dashboard.total_pipeline_value)"></p>
-                  <p class="text-xs text-gray-500 mt-1">Excluding lost deals</p>
+        </div>
+
+        <!-- Error -->
+        <div x-show="!loading && error" class="text-center py-16">
+          <p class="text-gray-500 mb-3" x-text="error"></p>
+          <button @click="loadDeals()" class="px-4 py-2 bg-brand text-white rounded-lg text-sm">Retry</button>
+        </div>
+
+        <!-- Kanban View -->
+        <div x-show="!loading && !error && viewMode === 'kanban'" class="kanban-board pb-4">
+          <template x-for="stage in stages" :key="stage.key">
+            <div
+              class="kanban-col"
+              @dragover="onDragOver($event)"
+              @drop="onDrop($event, stage.key)"
+              :class="draggingDealId ? 'transition-all' : ''"
+            >
+              <!-- Column header -->
+              <div class="flex items-center justify-between mb-3 px-1">
+                <div class="flex items-center gap-2">
+                  <span x-text="stage.icon" class="text-base leading-none"></span>
+                  <span class="text-sm font-semibold text-gray-700 dark:text-gray-300" x-text="stage.label"></span>
+                  <span class="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded-full font-medium" x-text="(dealsByStage[stage.key] || []).length"></span>
                 </div>
-                
-                <!-- Leads -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-                  <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Leads</h3>
-                    <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                    </svg>
-                  </div>
-                  <p class="text-3xl font-bold text-gray-900 dark:text-white" x-text="dashboard.deals_by_stage.lead.count"></p>
-                  <p class="text-xs text-gray-500 mt-1" x-text="formatCurrency(dashboard.deals_by_stage.lead.total_value)"></p>
-                </div>
-                
-                <!-- Proposals -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-                  <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Proposals</h3>
-                    <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
-                  </div>
-                  <p class="text-3xl font-bold text-gray-900 dark:text-white" x-text="dashboard.deals_by_stage.proposal.count"></p>
-                  <p class="text-xs text-gray-500 mt-1" x-text="formatCurrency(dashboard.deals_by_stage.proposal.total_value)"></p>
-                </div>
-                
-                <!-- Won Deals -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-                  <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Won</h3>
-                    <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                  </div>
-                  <p class="text-3xl font-bold text-gray-900 dark:text-white" x-text="dashboard.deals_by_stage.won.count"></p>
-                  <p class="text-xs text-gray-500 mt-1" x-text="formatCurrency(dashboard.deals_by_stage.won.total_value)"></p>
-                </div>
-                
+                <span class="text-xs text-gray-500 font-mono" x-text="formatCurrency(stageTotal(stage.key))"></span>
               </div>
-              
-              <!-- Two Column Layout -->
-              <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                <!-- Contacts Needing Follow-up -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-                  <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold">Contacts Need Attention</h3>
-                    <span class="px-2 py-1 bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 rounded-full text-xs font-medium" x-text="dashboard.contacts_needing_followup.length"></span>
+
+              <!-- Cards -->
+              <div class="space-y-2 min-h-[80px]">
+                <template x-for="deal in (dealsByStage[stage.key] || [])" :key="deal.id">
+                  <div
+                    class="deal-card bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm"
+                    draggable="true"
+                    @dragstart="onDragStart(deal.id)"
+                    @dragend="draggingDealId = null"
+                  >
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                      <p class="text-sm font-semibold text-gray-900 dark:text-white leading-tight" x-text="deal.title"></p>
+                      <div class="flex gap-1 shrink-0">
+                        <button @click="openEditModal(deal)" class="p-1 rounded text-gray-400 hover:text-brand transition">
+                          <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        </button>
+                        <button @click="confirmDelete(deal.id)" class="p-1 rounded text-gray-400 hover:text-red-500 transition">
+                          <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                    <p class="text-lg font-bold text-gray-900 dark:text-white font-mono mb-2" x-text="formatCurrency(deal.amount)"></p>
+                    <div class="flex items-center justify-between">
+                      <p class="text-xs text-gray-500 truncate" x-text="contactName(deal.contact_id)"></p>
+                      <p class="text-xs text-gray-400" x-text="formatDate(deal.created_at)"></p>
+                    </div>
                   </div>
-                  
-                  <template x-if="dashboard.contacts_needing_followup.length === 0">
-                    <div class="text-center py-8 text-gray-400">
-                      <svg class="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                      </svg>
-                      <p>All caught up! 🎉</p>
-                    </div>
-                  </template>
-                  
-                  <template x-if="dashboard.contacts_needing_followup.length > 0">
-                    <div class="space-y-3 max-h-96 overflow-y-auto">
-                      <template x-for="contact in dashboard.contacts_needing_followup.slice(0, 10)" :key="contact.id">
-                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition cursor-pointer">
-                          <div class="flex-1 min-w-0">
-                            <p class="font-medium truncate" x-text="contact.name"></p>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 truncate" x-text="contact.company_name || contact.email"></p>
-                          </div>
-                          <div class="text-right ml-4">
-                            <span class="text-xs text-red-600 dark:text-red-400 font-medium" x-text="formatRelativeTime(contact.days_since_contact)"></span>
-                          </div>
-                        </div>
-                      </template>
-                    </div>
-                  </template>
-                </div>
-                
-                <!-- Recent Activity -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-                  <h3 class="text-lg font-semibold mb-4">Recent Activity</h3>
-                  
-                  <template x-if="dashboard.recent_activity.length === 0">
-                    <div class="text-center py-8 text-gray-400">
-                      <p>No recent activity</p>
-                    </div>
-                  </template>
-                  
-                  <template x-if="dashboard.recent_activity.length > 0">
-                    <div class="space-y-3 max-h-96 overflow-y-auto">
-                      <template x-for="activity in dashboard.recent_activity" :key="activity.date + activity.contact_id">
-                        <div class="flex items-start space-x-3">
-                          <!-- Icon -->
-                          <div class="flex-shrink-0">
-                            <template x-if="activity.type === 'note_added'">
-                              <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                                <svg class="w-4 h-4 text-blue-600 dark:text-blue-300" fill="none" stroke="currentColor">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                </svg>
-                              </div>
-                            </template>
-                            <template x-if="activity.type === 'deal_updated' || activity.type === 'deal_added'">
-                              <div class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                                <svg class="w-4 h-4 text-green-600 dark:text-green-300" fill="none" stroke="currentColor">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                              </div>
-                            </template>
-                          </div>
-                          
-                          <!-- Content -->
-                          <div class="flex-1 min-w-0">
-                            <template x-if="activity.type === 'note_added'">
-                              <div>
-                                <p class="text-sm">
-                                  <span class="font-medium" x-text="activity.contact_name"></span>
-                                  <span class="text-gray-500"> — </span>
-                                  <span class="text-gray-600 dark:text-gray-400" x-text="activity.note_title"></span>
-                                </p>
-                                <p class="text-xs text-gray-500 mt-1" x-text="activity.date"></p>
-                              </div>
-                            </template>
-                            
-                            <template x-if="activity.type === 'deal_updated' || activity.type === 'deal_added'">
-                              <div>
-                                <p class="text-sm">
-                                  <span class="font-medium" x-text="activity.contact_name"></span>
-                                  <span class="text-gray-500"> — </span>
-                                  <span class="text-gray-600 dark:text-gray-400" x-text="activity.deal_title || 'Deal'"></span>
-                                  <span class="text-brand font-medium ml-1" x-text="formatCurrency(activity.deal_amount)"></span>
-                                </p>
-                                <p class="text-xs text-gray-500 mt-1">
-                                  <span class="capitalize" x-text="activity.deal_stage"></span>
-                                  <span> • </span>
-                                  <span x-text="activity.date"></span>
-                                </p>
-                              </div>
-                            </template>
-                          </div>
-                        </div>
-                      </template>
-                    </div>
-                  </template>
-                </div>
-                
+                </template>
+
+                <!-- Add to this stage shortcut -->
+                <button
+                  @click="openCreateModal(stage.key)"
+                  class="w-full py-2 text-xs text-gray-400 hover:text-brand hover:bg-brand/5 rounded-lg transition border border-dashed border-gray-200 dark:border-gray-700 hover:border-brand/30"
+                >
+                  + Add deal
+                </button>
               </div>
-              
             </div>
           </template>
-          
         </div>
-      </div>
-      
-      <!-- Contacts Page -->
-      <div x-show="page === 'contacts'" x-cloak>
-        <div class="text-center py-12">
-          <p class="text-gray-500">Contacts page coming next...</p>
+
+        <!-- List View -->
+        <div x-show="!loading && !error && viewMode === 'list'">
+
+          <!-- Empty -->
+          <template x-if="deals.length === 0">
+            <div class="flex flex-col items-center justify-center py-20 text-center">
+              <div class="w-16 h-16 rounded-2xl bg-brand/10 flex items-center justify-center mb-4">
+                <svg viewBox="0 0 24 24" class="w-8 h-8 text-brand" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+              </div>
+              <h3 class="text-base font-semibold text-gray-900 dark:text-white mb-1">No deals yet</h3>
+              <p class="text-sm text-gray-500 mb-4">Track your sales opportunities here.</p>
+              <button @click="openCreateModal()" class="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark transition">Add Deal</button>
+            </div>
+          </template>
+
+          <!-- Table -->
+          <div x-show="deals.length > 0" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                    <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Deal</th>
+                    <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Contact</th>
+                    <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Stage</th>
+                    <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
+                    <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                    <th class="px-4 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
+                  <template x-for="deal in deals" :key="deal.id">
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition group">
+                      <td class="px-5 py-3.5">
+                        <p class="font-medium text-gray-900 dark:text-white truncate max-w-[180px]" x-text="deal.title"></p>
+                      </td>
+                      <td class="px-4 py-3.5 text-gray-600 dark:text-gray-400 truncate max-w-[140px]" x-text="contactName(deal.contact_id)"></td>
+                      <td class="px-4 py-3.5">
+                        <span :class="'stage-pill stage-' + deal.stage" x-text="deal.stage"></span>
+                      </td>
+                      <td class="px-4 py-3.5 text-right font-semibold font-mono text-gray-900 dark:text-white" x-text="formatCurrency(deal.amount)"></td>
+                      <td class="px-4 py-3.5 text-gray-500 whitespace-nowrap" x-text="formatDate(deal.created_at)"></td>
+                      <td class="px-4 py-3.5">
+                        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition justify-end">
+                          <button @click="openEditModal(deal)" class="p-1.5 rounded-lg text-gray-400 hover:text-brand hover:bg-brand/10 transition">
+                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                          </button>
+                          <button @click="confirmDelete(deal.id)" class="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
+                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-      </div>
-      
-      <!-- Deals Page -->
-      <div x-show="page === 'deals'" x-cloak>
-        <div class="text-center py-12">
-          <p class="text-gray-500">Deals page coming soon...</p>
+
+        <!-- Deal Create/Edit Modal -->
+        <div
+          x-show="showModal"
+          x-transition:enter="transition ease-out duration-200"
+          x-transition:enter-start="opacity-0"
+          x-transition:enter-end="opacity-100"
+          x-transition:leave="transition ease-in duration-150"
+          x-transition:leave-start="opacity-100"
+          x-transition:leave-end="opacity-0"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          @click.self="closeModal()"
+        >
+          <div
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100"
+            class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6"
+          >
+            <div class="flex items-center justify-between mb-5">
+              <h3 class="text-base font-bold text-gray-900 dark:text-white" x-text="modalMode === 'create' ? 'New Deal' : 'Edit Deal'"></h3>
+              <button @click="closeModal()" class="p-1 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+
+            <div x-show="formError" class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300" x-text="formError"></div>
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Deal Title *</label>
+                <input type="text" x-model="form.title" required placeholder="e.g. Website Redesign Project"
+                  class="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand focus:border-transparent transition" />
+              </div>
+
+              <template x-if="modalMode === 'create'">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Contact *</label>
+                  <select x-model="form.contact_id" required
+                    class="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand focus:border-transparent transition">
+                    <option value="">Select a contact…</option>
+                    <template x-for="c in contacts" :key="c.id">
+                      <option :value="c.id" x-text="c.name + (c.company_name ? ' — ' + c.company_name : '')"></option>
+                    </template>
+                  </select>
+                </div>
+              </template>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Amount (USD) *</label>
+                  <input type="number" x-model="form.amount" min="0" step="0.01" required placeholder="5000"
+                    class="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand focus:border-transparent transition" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Stage</label>
+                  <select x-model="form.stage"
+                    class="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand focus:border-transparent transition">
+                    <template x-for="s in stages" :key="s.key">
+                      <option :value="s.key" x-text="s.label"></option>
+                    </template>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+              <button @click="closeModal()" class="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition">Cancel</button>
+              <button
+                @click="saveDeal()"
+                :disabled="saving || !form.title.trim() || !form.amount || (modalMode==='create' && !form.contact_id)"
+                class="flex-1 py-2.5 text-sm font-medium text-white bg-brand hover:bg-brand-dark rounded-lg transition disabled:opacity-50 shadow-sm"
+              >
+                <span x-show="!saving" x-text="modalMode === 'create' ? 'Create Deal' : 'Save Changes'"></span>
+                <span x-show="saving">Saving…</span>
+              </button>
+            </div>
+          </div>
         </div>
+
+        <!-- Delete Confirm Modal -->
+        <div
+          x-show="deleteConfirmId"
+          x-transition:enter="transition ease-out duration-150"
+          x-transition:enter-start="opacity-0"
+          x-transition:enter-end="opacity-100"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+        >
+          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+            <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
+              <svg viewBox="0 0 24 24" class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </div>
+            <h3 class="text-base font-bold text-gray-900 dark:text-white mb-1">Delete Deal?</h3>
+            <p class="text-sm text-gray-500 mb-5">This action cannot be undone.</p>
+            <div class="flex gap-3">
+              <button @click="cancelDelete()" class="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition">Cancel</button>
+              <button @click="deleteDeal(deleteConfirmId)" class="flex-1 py-2.5 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition">Delete</button>
+            </div>
+          </div>
+        </div>
+
       </div>
-      
+
     </main>
   </div>
 
+  <!-- App Shell Script -->
   <script>
-    // Dashboard Stats Component
-    document.addEventListener('alpine:init', () => {
-      Alpine.data('dashboardStats', () => ({
-        dashboard: null,
-        loading: true,
-        error: null,
-        
-        async init() {
-          await this.fetchDashboard();
-        },
-        
-        async fetchDashboard() {
-          this.loading = true;
-          this.error = null;
-          
-          try {
-            this.dashboard = await API.getDashboard();
-          } catch (error) {
-            console.error('Failed to load dashboard:', error);
-            this.error = error.message;
-          } finally {
-            this.loading = false;
-          }
-        },
-        
-        formatCurrency(amount) {
-          return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-          }).format(amount);
-        },
-        
-        formatRelativeTime(days) {
-          if (days === 0) return 'Today';
-          if (days === 1) return 'Yesterday';
-          if (days === 999) return 'Never';
-          return `${days} days ago`;
-        }
-      }));
-    });
-    
-    // Main Dashboard App
-    function dashboardApp() {
+    function appShell() {
       return {
         page: 'dashboard',
         sidebarOpen: false,
         search: '',
-        
+
         async init() {
-          // Check authentication
           AuthManager.requireAuth();
-          
-          // Load user data
           await Alpine.store('auth').init();
-          
-          // Responsive sidebar
+          await Alpine.store('data').refreshContacts();
+
           this.sidebarOpen = window.innerWidth >= 1024;
           window.addEventListener('resize', () => {
-            if (window.innerWidth >= 1024) {
-              this.sidebarOpen = true;
-            } else {
-              this.sidebarOpen = false;
-            }
+            this.sidebarOpen = window.innerWidth >= 1024;
           });
         },
-        
-        setPage(pageName) {
-          this.page = pageName;
+
+        setPage(name) {
+          this.page = name;
           this.search = '';
-          
-          // Close sidebar on mobile
-          if (window.innerWidth < 1024) {
-            this.sidebarOpen = false;
-          }
+          if (window.innerWidth < 1024) this.sidebarOpen = false;
         },
-        
+
         logout() {
-          if (confirm('Are you sure you want to logout?')) {
+          if (confirm('Sign out of meCRM?')) {
             Alpine.store('auth').logout();
           }
         }
-      }
+      };
     }
   </script>
 

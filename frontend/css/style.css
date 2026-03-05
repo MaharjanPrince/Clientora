@@ -1,0 +1,155 @@
+/* meCRM Global Styles */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; }
+
+[x-cloak] { display: none !important; }
+
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: #f8f9fc;
+  color: #111827;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+.dark ::-webkit-scrollbar-thumb { background: #374151; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+/* Dark mode body */
+.dark body, body.dark-mode { background: #0f1117; color: #f3f4f6; }
+
+/* Monospace for amounts/codes */
+.font-mono { font-family: 'DM Mono', 'Fira Code', monospace; }
+
+/* Deal stage pill badges */
+.stage-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.stage-lead        { background: #fef3c7; color: #92400e; }
+.stage-proposal    { background: #dbeafe; color: #1e40af; }
+.stage-negotiation { background: #ede9fe; color: #5b21b6; }
+.stage-won         { background: #d1fae5; color: #065f46; }
+.stage-lost        { background: #fee2e2; color: #991b1b; }
+.dark .stage-lead        { background: #78350f40; color: #fcd34d; }
+.dark .stage-proposal    { background: #1e3a8a40; color: #93c5fd; }
+.dark .stage-negotiation { background: #4c1d9540; color: #c4b5fd; }
+.dark .stage-won         { background: #064e3b40; color: #6ee7b7; }
+.dark .stage-lost        { background: #7f1d1d40; color: #fca5a5; }
+
+/* Kanban board */
+.kanban-board {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  align-items: flex-start;
+}
+.kanban-column {
+  flex: 0 0 260px;
+  min-width: 260px;
+}
+.kanban-column.drag-over {
+  outline: 2px dashed #6366f1;
+  outline-offset: 2px;
+  border-radius: 12px;
+}
+.deal-card {
+  cursor: grab;
+  user-select: none;
+}
+.deal-card:active { cursor: grabbing; opacity: 0.8; }
+.deal-card.dragging { opacity: 0.5; }
+
+/* Smooth transitions for modals */
+.modal-backdrop {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Toast */
+.toast-stack { pointer-events: none; }
+.toast-item { pointer-events: all; }
+
+/* Contact avatar ring */
+.avatar-ring {
+  box-shadow: 0 0 0 3px #fff, 0 0 0 5px #6366f130;
+}
+.dark .avatar-ring {
+  box-shadow: 0 0 0 3px #1f2937, 0 0 0 5px #6366f130;
+}
+
+/* Note card */
+.note-card {
+  border-left: 3px solid #6366f1;
+}
+.dark .note-card { border-left-color: #818cf8; }
+
+/* Loading shimmer */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+.dark .shimmer {
+  background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
+  background-size: 800px 100%;
+}
+
+/* AI context card gradient border */
+.ai-card {
+  position: relative;
+  border-radius: 12px;
+  padding: 1px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+}
+.ai-card-inner {
+  background: #fff;
+  border-radius: 11px;
+  padding: 16px;
+}
+.dark .ai-card-inner { background: #1f2937; }
+
+/* Tab underline indicator */
+.tab-active {
+  border-bottom: 2px solid #6366f1;
+  color: #6366f1;
+}
+
+/* Sidebar transition */
+.sidebar-transition {
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Focus ring custom */
+*:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+/* Responsive helpers */
+@media (max-width: 1023px) {
+  .kanban-board { padding-bottom: 80px; }
+}
+
+/* Print */
+@media print {
+  .no-print { display: none !important; }
+}
