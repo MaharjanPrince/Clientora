@@ -526,7 +526,7 @@
         <div x-show="!loading && !error" class="flex gap-4" style="min-height: 500px;">
 
           <!-- Contacts List -->
-          <div :class="selectedContact ? 'w-80 shrink-0 flex flex-col' : 'flex flex-col w-full'">
+          <div :class="selectedContact ? 'hidden sm:block sm:w-80 sm:shrink-0 sm:flex sm:flex-col' : 'flex flex-col w-full'">
 
             <!-- Empty state -->
             <template x-if="filteredContacts.length === 0 && !search">
@@ -553,7 +553,7 @@
                 <div
                   @click="selectContact(contact)"
                   :class="selectedContact?.id === contact.id ? 'ring-2 ring-brand bg-brand/5 dark:bg-brand/10' : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
-                  class="flex items-center gap-3 p-4 rounded-xl border border-gray-100 dark:border-gray-700 cursor-pointer transition group"
+                  class="flex items-center gap-3 p-4 rounded-xl border border-gray-100 dark:border-gray-700 cursor-pointer transition group overflow-hidden"
                 >
                   <!-- Avatar -->
                   <div
@@ -566,8 +566,8 @@
                     <p class="text-sm font-semibold text-gray-900 dark:text-white truncate" x-text="contact.name"></p>
                     <p class="text-xs text-gray-500 truncate" x-text="contact.company_name || contact.email"></p>
                   </div>
-                  <!-- Actions -->
-                  <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition" @click.stop>
+                  <!-- Actions - Hidden on mobile, visible on desktop -->
+                  <div class="hidden sm:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition shrink-0" @click.stop>
                     <button
                       @click="openEditModal(contact)"
                       class="p-1.5 rounded-lg text-gray-400 hover:text-brand hover:bg-brand/10 transition"
@@ -589,8 +589,12 @@
 
           </div>
 
-          <!-- Contact Detail Panel -->
-          <div x-show="selectedContact" class="flex-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col" style="min-height: 500px;">
+          <!-- Contact Detail Panel - Fullscreen on mobile, sidebar on desktop -->
+          <div 
+            x-show="selectedContact" 
+            class="fixed inset-0 z-40 bg-white dark:bg-gray-800 sm:relative sm:flex-1 sm:rounded-xl sm:border sm:border-gray-100 sm:dark:border-gray-700 overflow-hidden flex flex-col" 
+            style="min-height: 500px;"
+          >
 
             <template x-if="selectedContact">
               <div class="flex flex-col h-full">

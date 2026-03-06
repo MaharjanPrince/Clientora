@@ -153,3 +153,23 @@ body {
 @media print {
   .no-print { display: none !important; }
 }
+
+/* Fix mobile contact list overflow */
+@media (max-width: 640px) {
+  /* Ensure contact list container doesn't overflow */
+  [x-show="page === 'contacts'"] > div > div:first-child {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  
+  /* Force contact cards to fit */
+  .space-y-2 {
+    max-width: 100vw;
+    padding-right: 1rem;
+  }
+  
+  /* Ensure the entire contacts page wrapper fits */
+  body main {
+    overflow-x: hidden;
+  }
+}

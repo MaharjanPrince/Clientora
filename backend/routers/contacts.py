@@ -30,12 +30,28 @@ def create_contact(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
+    # Check if contact with this email already exists for this user
+    existing_contact = (
+        db.query(models.Contact)
+        .filter(
+            models.Contact.email == contact.email,
+            models.Contact.user_id == current_user.id
+        )
+        .first()
+    )
+    
+    if existing_contact:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Contact with email {contact.email} already exists"
+        )
+    
+    # Create new contact
     new_contact = models.Contact(**contact.model_dump(), user_id=current_user.id)
     db.add(new_contact)
     db.commit()
     db.refresh(new_contact)
     return new_contact
-
 
 @router.get("/", response_model=List[schemas.ContactResponse])
 def get_contacts(
