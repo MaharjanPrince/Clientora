@@ -9,6 +9,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://venerable-kitsune-52fb64.netlify.app",
         "https://clientora.netlify.app",
         "http://localhost:3000",],
     allow_credentials=True,
