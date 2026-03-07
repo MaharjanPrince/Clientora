@@ -17,11 +17,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 10080  # 7days
 
 # 1. Hash Password
 def hash_password(password: str) -> str:
-    # Convert string to bytes, salt it, and hash it
-    pwd_bytes = password.encode("utf-8")
-    salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(pwd_bytes, salt)
-    return hashed.decode("utf-8")  # Store as string in DB
+    # bcrypt in newer versions expects str, not bytes
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 
 # 2. Verify Password
