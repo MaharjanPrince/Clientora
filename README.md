@@ -1,116 +1,269 @@
-# Me_CRM Project Documentation
+# Clientora
 
-## Overview
+Clientora is a lightweight Customer Relationship Management (CRM) system designed to manage contacts, deals, and business activities through a simple web interface and a FastAPI backend.
 
-**Me_CRM** is a high-performance, multi-tenant CRM built with **FastAPI** and **PostgreSQL**. It features strict data isolation, secure JWT authentication, and a dynamic sales pipeline engine.
+The project is structured with a **FastAPI backend** and a **static HTML/CSS frontend** that communicates with the backend through HTTP APIs.
 
 ---
 
-## 1. Authentication & Security
+# Project Structure
 
-The "Gatekeeper" of the system.
-
-- **Stateful Security**: Uses **JWT (JSON Web Tokens)** for session management.
-- **Password Safety**: Implements **Bcrypt** hashing via `passlib`.
-- **Standardization**: Follows the **OAuth2** password flow.
-
-> 💡 **Note:** When logging in via Postman, the email must be sent in the `username` field of the `form-data` section.
-> 
-
-## 2. Data Architecture & Relationships
-
-The system uses a hierarchical relational model. Data ownership is the #1 priority.
-
-| **Entity** | **Description** | **Relationship** |
-| --- | --- | --- |
-| **Users** | Account holders / CRM owners | One-to-Many with Contacts & Deals |
-| **Contacts** | The people you sell to | Belongs to a User; One-to-Many with Deals |
-| **Notes** | Timeline interactions | Belongs to a Contact |
-| **Deals** | Sales opportunities | Belongs to a User & Contact |
-
-## 3. Core Logic Features
-
-### Data Isolation (The "Owner" Filter)
-
-Every request is filtered by `user_id`.
-
-```python
-db.query(Deal).filter(id=deal_id, user_id=current_user.id)
+```
+Clientora
+│
+├── backend/              # FastAPI application
+│   ├── main.py           # Application entry point
+│   ├── database.py       # Database configuration
+│   ├── models.py         # Database models
+│   ├── schemas.py        # Pydantic schemas
+│   ├── auth.py           # Authentication logic
+│   ├── dependencies.py   # Shared dependencies
+│   │
+│   └── routers/
+│       ├── auth.py
+│       ├── contacts.py
+│       ├── deals.py
+│       └── dashboard.py
+│
+├── frontend/             # Client-side interface
+│   ├── index.html        # Login page
+│   ├── dashboard.html    # CRM dashboard
+│   └── css/
+│       └── style.css
+│
+├── README.md
+└── .gitignore
 ```
 
-*This ensures User A can never "guess" a URL to see User B's financial data.*
+---
 
-### Cascading Intelligence
+# Backend
 
-We use database-level cascades to maintain a clean environment.
+The backend is built using **FastAPI** and provides REST APIs that power the CRM.
 
-- **If you delete a Contact:** All associated **Notes** and **Deals** are instantly purged to prevent "Ghost Data" (Orphaned records).
+## Features
 
-## 4. API Endpoint Map
+* User authentication
+* Contact management
+* Deal management
+* Dashboard data aggregation
+* Structured API routing
+* Database abstraction layer
 
-### Authentication
+## Core Components
 
-| **Method** | **Endpoint** | **Use Case** |
-| --- | --- | --- |
-| `POST` | `/auth/register` | Sign up a new user |
-| `POST` | `/auth/login` | Get your Bearer Token |
+### `main.py`
 
-### Contacts & Notes
+Entry point of the FastAPI application.
+Responsible for:
 
-| **Method** | **Endpoint** | **Use Case** |
-| --- | --- | --- |
-| `POST` | `/contacts/` | Add a new person to the CRM |
-| `GET` | `/contacts/` | View your personal address book |
-| `POST` | `/contacts/{id}/notes` | Add a meeting summary or call log |
+* Creating the FastAPI app
+* Registering routers
+* Starting the server
 
-### Deals & Pipeline
+### `database.py`
 
-| **Method** | **Endpoint** | **Use Case** |
-| --- | --- | --- |
-| `POST` | `/deals/` | Log a new sales opportunity |
-| `GET` | `/deals/pipeline` | **Dashboard View**: Returns sums, counts, and grouped deals |
+Handles the database connection and session management.
 
-## 5. Pipeline Logic (Current Progress)
+### `models.py`
 
-The `/deals/pipeline` endpoint is our first "Intelligence" feature.
+Defines the database tables used by the application.
 
-- **Aggregation**: Automatically groups deals by stage (`lead`, `proposal`, `negotiation`, `won`, `lost`).
-- **Financial Logic**: Calculates a `total_value` that sums up potential revenue but **excludes** "lost" deals.
-- **Consistency**: Even if a stage is empty, the API returns `count: 0` to keep the frontend charts from breaking.
+Typical entities include:
 
-## 6. AI Insight Engine
+* Users
+* Contacts
+* Deals
 
-Logical workflow
+### `schemas.py`
 
-- **Context Retrieval**: The system fetches all notes for a specific `contact_id`, ordered by date.
-- **Security Layer**: The system verifies the `current_user` owns the contact before any data is sent to the AI.
-- **Prompt Engineering**: Notes are formatted into a timeline and sent to the LLM with a strict JSON system prompt.
-- **Metadata Calculation**: The backend calculates `days_since_contact` using timezone-aware UTC logic to avoid calculation errors.
-- **Schema Validation**: The AI response is parsed and validated against a Pydantic `ContactContext` schema.
+Defines the request and response structures using **Pydantic models**.
 
-Implements Safeguards
+These ensure:
 
-- **Timezone-Awareness**: Uses `datetime.now(timezone.utc)` to ensure compatibility with PostgreSQL timestamps.
-- **JSON Enforcement**: Uses `response_format={"type": "json_object"}` to prevent the AI from returning non-parsable conversational text.
-- **Plurality Validation**: Strict Pydantic schemas ensure that singular fields like `next_action` match the AI output exactly.
+* Input validation
+* Structured API responses
 
-## 7. DashBoard
+### `auth.py`
 
-| **Pillar** | **Data Source** | **Logic** |
-| --- | --- | --- |
-| **Pipeline Stats** | `Deals` | Real-time sum of value per stage; excludes "lost" revenue. |
-| **Urgency Engine** | `Contacts` + `Notes` | Flags "stale" leads with no interaction for >30 days. |
-| **Activity Feed** | `Notes` + `Deals` | A unified stream of the latest 15 CRM updates. |
+Handles authentication logic such as:
 
-Key logic
+* Login validation
+* Password handling
+* Token generation
 
-- **Follow-Up Math**: Uses `now_utc - last_note.created_at` to sort contacts by neglect.
-- **Feed Merging**: Combines `Note` and `Deal` objects, calculates `days_ago`, and formats human-readable timestamps.
-- **Timezone Safety**: Enforces `timezone.utc` to prevent naive-vs-aware datetime crashes.
+### `dependencies.py`
 
-**Response Structure:**
+Contains reusable dependencies used by routes, such as:
 
-- `total_pipeline_value`: Total active revenue.
-- `deals_by_stage`: Grouped counts/values.
-- `contacts_needing_followup`: List of stale leads.
-- `recent_activity`: Unified event feed.
+* Database session injection
+* Authentication guards
+
+### Routers
+
+Routers separate the API into logical modules.
+
+**auth.py**
+
+Handles user authentication endpoints.
+
+Example:
+
+```
+POST /login
+POST /register
+```
+
+**contacts.py**
+
+Manages customer contacts.
+
+Example:
+
+```
+GET /contacts
+POST /contacts
+DELETE /contacts/{id}
+```
+
+**deals.py**
+
+Manages business deals and pipeline stages.
+
+Example:
+
+```
+GET /deals
+POST /deals
+UPDATE /deals/{id}
+```
+
+**dashboard.py**
+
+Provides aggregated data for the dashboard.
+
+Example:
+
+```
+GET /dashboard
+```
+
+---
+
+# Frontend
+
+The frontend provides a simple web interface for interacting with the CRM.
+
+It is built using:
+
+* HTML
+* CSS
+* JavaScript (via browser API requests)
+
+The frontend communicates with the backend through HTTP requests.
+
+## Pages
+
+### `index.html`
+
+Login page for accessing the CRM.
+
+Responsibilities:
+
+* Collect user credentials
+* Send login request to the backend
+* Redirect authenticated users to the dashboard
+
+---
+
+### `dashboard.html`
+
+Main application interface.
+
+Displays:
+
+* Contacts
+* Deals
+* Dashboard statistics
+
+The page fetches data from the backend API and renders it dynamically.
+
+---
+
+### `css/style.css`
+
+Provides styling for the entire frontend interface.
+
+Includes styles for:
+
+* Layout
+* Navigation
+* Forms
+* Dashboard components
+
+---
+
+# Running the Project
+
+## 1. Start the Backend
+
+Navigate to the backend directory:
+
+```
+cd backend
+```
+
+Install dependencies:
+
+```
+pip install -r requirements.txt
+```
+
+Run the server:
+
+```
+uvicorn main:app --reload
+```
+
+The API will start at:
+
+```
+http://127.0.0.1:8000
+```
+
+---
+
+## 2. Open the Frontend
+
+Navigate to the `frontend` folder and open:
+
+```
+index.html
+```
+
+in your browser.
+
+You can also serve it with a simple server:
+
+```
+python -m http.server
+```
+
+---
+
+# Future Improvements
+
+Possible improvements for the project include:
+
+* JavaScript frontend framework integration
+* Role-based authentication
+* Workflow automation
+* Activity tracking
+* File attachments for contacts and deals
+* Real-time updates
+
+---
+
+# License
+
+This project is currently under development.
