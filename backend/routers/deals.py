@@ -1,14 +1,15 @@
 from typing import List, Optional
 from uuid import UUID
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from decimal import Decimal
-from .. import auth, database, models, schemas
-# backend/routers/deals.py
-from .. import models, schemas, database
-# from ..auth import get_current_user
-from ..dependencies import get_current_user
+
+import auth
+import database
+import models
+import schemas
+from dependencies import get_current_user
 
 router = APIRouter(prefix="/deals", tags=["deals"])
 

@@ -1,5 +1,4 @@
 import uuid
-from time import timezone
 
 from sqlalchemy import Boolean, Column, DateTime, Numeric, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -7,7 +6,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.sql.schema import ForeignKey
 
-from .database import Base
+from database import Base
 
 
 class User(Base):
