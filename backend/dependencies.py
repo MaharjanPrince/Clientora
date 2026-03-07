@@ -3,7 +3,9 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
-from . import auth, database, models
+import auth
+import database
+import models
 
 # This tells FastAPI where to look for the token (the /auth/login route)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
