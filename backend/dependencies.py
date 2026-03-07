@@ -20,7 +20,7 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    payload = auth.decode_access_token(token)
+    payload = auth.verify_token(token)
     if payload is None:
         raise credentials_exception
 
