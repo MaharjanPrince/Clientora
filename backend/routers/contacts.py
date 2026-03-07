@@ -1,18 +1,19 @@
 from typing import List, Optional
 from uuid import UUID
-
-from click import prompt
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-
-from .. import auth, database, models, schemas
 import os
 import json
-from groq import Groq
 from datetime import datetime, timezone
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from groq import Groq
+
+import auth
+import database
+import models
+import schemas
+from dependencies import get_current_user
 # from ..auth import get_current_user
-from ..dependencies import get_current_user
 
 
 #Initializing the Groq Client
