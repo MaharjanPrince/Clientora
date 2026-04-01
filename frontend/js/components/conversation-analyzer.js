@@ -99,6 +99,22 @@ function conversationAnalyzer() {
         await API.createContact(contactData);
         await Alpine.store('data').refreshContacts();
         Alpine.store('toast').success('Contact saved successfully!');
+
+        // Ask if they want to create a deal
+        const createDeal = confirm('Contact saved! Would you like to create a deal for this opportunity?');
+        if (createDeal) {
+          // Store deal insights for the deals page to use
+          Alpine.store('pendingDeal', {
+            contactName: this.insight.contact_name,
+            company: this.insight.company,
+            summary: this.insight.summary,
+            amount: null, // They can fill this in
+            stage: this.insight.status?.includes('Hot') ? 'Proposal' : 'Discovery'
+          });
+          
+          // Navigate to deals page
+          Alpine.store('navigation').setPage('deals');
+        }
       } catch (err) {
         Alpine.store('toast').error(err.message || 'Failed to save contact');
       }
