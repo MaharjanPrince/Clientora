@@ -6,7 +6,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+pwd_context = CryptContext(
+    schemes=["argon2"], 
+    deprecated="auto",
+    argon2__time_cost=2,      # Iterations (lower = faster)
+    argon2__memory_cost=65536, # Memory in KB (lower = faster) 
+    argon2__parallelism=1      # Threads (lower = faster)
+)
 
 # Config from .env
 SECRET_KEY = os.getenv("SECRET_KEY")
