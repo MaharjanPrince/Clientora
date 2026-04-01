@@ -158,3 +158,68 @@ class DashboardResponse(BaseModel):
     deals_by_stage: Dict[str, StageStats]
     contacts_needing_followup: List[ContactNeedingFollowup]
     recent_activity: List[RecentActivity]
+
+class ConversationInput(BaseModel):
+    """User pastes raw convo text"""
+    raw_text: str = Field(..., min_length=10, max_length=10000, description="Raw conversation text from user")
+
+    class config:
+        json_schema_extra = {
+            "example": {
+                "raw_text": "Had a call with John from Acme. He wants pricing for enterprise plan. Said he'll discuss with team next week. Seemed cautious about budget."
+            }
+        }
+
+class DealInsight(BaseModel):
+    """AI-powered deal insights(The improved UI version)"""
+
+    #Contact info extracted
+    contact_name: Optional[str] = None
+    company: Optional[str] = None
+    contact_email: Optional[str] = None
+
+    #Status
+    status: str = "Warm Lead" #Warm/Cold/Hot Lead
+
+    #whats happening section
+    summary: str
+    blocker: Optional[str] = None
+
+    #Timing section
+    decision_expected: Optional[str] = None
+    window_closes: Optional[str] = None
+
+    #Action section
+    next_action: str
+    next_action_date: Optional[str] = None
+
+    #Why this matters
+    reasoning: str
+
+    #Signal Strength
+    signal_strength: str = "3/5" #1/5 to 5/5
+    signal_factors: List[str] = []
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "contact_name": "John",
+                "company": "Acme Corp",
+                "status": "Warm lead",
+                "summary": "Interested in enterprise plan pricing. Will decide next week with team.",
+                "blocker": "Budget concerns",
+                "decision_expected": "Next week (by March 28)",
+                "window_closes": "Friday, March 26",
+                "next_action": "Follow up Thursday, March 25 — catch them before the decision",
+                "reasoning": "Clear intent + defined timeline + budget concern mentioned = high conversion if you address pricing objections now",
+                "signal_strength": "3/5",
+                "signal_factors": ["Clear intent (wants pricing)", "Defined timeline (next week)", "Budget concern mentioned"]
+            }
+        }
+
+class ConversationAnalysisResponse(BaseModel):
+    conversation_id: str
+    deal_insights: DealInsight  # changed from deal_insight
+    raw_text: str
+    created_at: str
+    suggest_create_contact: bool = True

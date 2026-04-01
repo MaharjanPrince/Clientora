@@ -92,3 +92,34 @@ class Deal(Base):
     # Relationships (Optional but helpful for cross-referencing)
     owner = relationship("User", back_populates="deals")
     contact = relationship("Contact", back_populates="deals")
+
+class Conversation(Base):
+    """Stores raw converstaion pastes and AI analysis"""
+    __tablename__ = "conversations"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    
+    #Raw conversatoin from user
+    raw_text = Column(String(10000), nullable=False)
+
+    #AI extracted data(JSON )
+    extracted_contact_name = Column(String, nullable=True)
+    extracted_company = Column(String, nullable=True)
+    extracted_email = Column(String, nullable=True)
+
+    #AI analysis results (JSON)
+    ai_summary = Column(String(5000), nullable=True)
+    ai_next_action = Column(String(500), nullable=True)
+    ai_follow_up_date = Column(String(50), nullable=True)
+    ai_sentiment = Column(String(50), nullable=True)
+    ai_signal_strength = Column(String(10), nullable=True)
+    ai_blocker = Column(String(500), nullable=True)
+
+    # Link to contact if created from this conversation
+    contact_id = Column(UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL"), nullable=True)
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+     # Relationships
+    owner = relationship("User", backref="conversations")
+    contact = relationship("Contact", backref="source_conversations")
