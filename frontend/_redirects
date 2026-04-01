@@ -1,0 +1,6 @@
+# SPA redirects for clean URLs
+/dashboard    /dashboard.html    200
+/             /index.html        200
+
+# Fallback for 404s
+/*            /index.html        404
