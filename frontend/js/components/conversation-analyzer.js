@@ -82,12 +82,18 @@ function conversationAnalyzer() {
     async saveContact() {
       if (!this.insight) return;
 
+      // Check if we have an email
+      if (!this.insight.contact_email || !this.insight.contact_email.includes('@')) {
+        Alpine.store('toast').error('Cannot save contact: No email found in conversation');
+        return;
+      }
+
       try {
         const contactData = {
           name: this.insight.contact_name || 'Unknown Contact',
-          company: this.insight.company || '',
-          email: this.insight.contact_email || '',
-          notes: this.insight.summary || ''
+          company_name: this.insight.company || null,
+          email: this.insight.contact_email,
+          phone_no: null
         };
 
         await API.createContact(contactData);
