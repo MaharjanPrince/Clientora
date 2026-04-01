@@ -42,6 +42,11 @@ function contactsPage() {
 
     async init() {
       await this.loadContacts();
+      
+      // Listen for contact updates from analyzer or other sources
+      window.addEventListener('contacts-updated', (e) => {
+        this.contacts = e.detail;
+      });
     },
 
     async loadContacts() {
