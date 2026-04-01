@@ -36,6 +36,7 @@
   <script src="js/components/contacts-table.js"></script>
   <script src="js/components/contact-details.js"></script>
   <script src="js/components/dashboard-status.js"></script>
+  <script src="js/components/conversation-analyzer.js"></script>
   <script src="js/pages/dashboard-page.js"></script>
   <script src="js/pages/contacts-page.js"></script>
   <script src="js/pages/deals-page.js"></script>
@@ -174,6 +175,16 @@
           >
             <svg viewBox="0 0 24 24" class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
             Deals
+          </button>
+        </li>
+        <li>
+          <button
+            @click="setPage('analyze')"
+            :class="page==='analyze' ? 'bg-brand/10 text-brand font-semibold' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'"
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm"
+          >
+            <svg viewBox="0 0 24 24" class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+            Analyze
           </button>
         </li>
       </ul>
@@ -1177,6 +1188,202 @@
           </div>
         </div>
 
+      </div>
+
+      <!-- ══════════════════════════════
+           ANALYZE CONVERSATION PAGE
+      ══════════════════════════════ -->
+      <div x-show="page === 'analyze'" x-cloak x-data="conversationAnalyzer()">
+
+        <div class="max-w-4xl mx-auto space-y-6 fade-in-up">
+
+          <!-- Header -->
+          <div>
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white">Analyze Conversation</h2>
+            <p class="text-sm text-gray-500 mt-0.5">Paste a client conversation to extract deal insights with AI.</p>
+          </div>
+
+          <!-- Input Section -->
+          <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-5">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Paste your conversation
+            </label>
+            <textarea
+              x-model="rawText"
+              rows="10"
+              placeholder="Paste your email thread, chat log, or meeting notes here..."
+              class="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-brand focus:border-transparent resize-none text-sm"
+              :disabled="loading"
+            ></textarea>
+            <div class="mt-4 flex items-center justify-between">
+              <p class="text-xs text-gray-400">
+                <span x-text="rawText.length"></span> characters
+              </p>
+              <button
+                @click="analyzeConversation()"
+                :disabled="loading || !rawText.trim()"
+                class="inline-flex items-center gap-2 px-5 py-2.5 bg-brand hover:bg-brand-dark disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white font-medium rounded-lg transition text-sm"
+              >
+                <template x-if="loading">
+                  <svg class="w-4 h-4 spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4m10-10h-4M6 12H2m15.07-5.07l-2.83 2.83M8.76 15.24l-2.83 2.83m11.31 0l-2.83-2.83M8.76 8.76L5.93 5.93"/></svg>
+                </template>
+                <template x-if="!loading">
+                  <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </template>
+                <span x-text="loading ? 'Analyzing...' : 'Analyze with AI'"></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Error State -->
+          <template x-if="error && !loading">
+            <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+              <div class="flex items-center gap-2 text-red-600 dark:text-red-400">
+                <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01"/></svg>
+                <span class="text-sm font-medium" x-text="error"></span>
+              </div>
+            </div>
+          </template>
+
+          <!-- Deal Insight Card -->
+          <template x-if="insight && !loading">
+            <div class="ai-gradient-border">
+              <div class="ai-gradient-inner p-6 space-y-5">
+
+                <!-- Header Row: Contact + Status -->
+                <div class="flex items-start justify-between">
+                  <div>
+                    <div class="flex items-center gap-3">
+                      <div class="w-12 h-12 rounded-full bg-brand/10 flex items-center justify-center">
+                        <span class="text-brand font-bold text-lg" x-text="(insight.contact_name || 'U').charAt(0).toUpperCase()"></span>
+                      </div>
+                      <div>
+                        <h3 class="font-semibold text-lg text-gray-900 dark:text-white" x-text="insight.contact_name || 'Unknown Contact'"></h3>
+                        <p class="text-sm text-gray-500" x-text="insight.company || 'No company'"></p>
+                        <template x-if="insight.contact_email">
+                          <p class="text-xs text-gray-400 mt-0.5" x-text="insight.contact_email"></p>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                  <span
+                    class="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide"
+                    :class="getStatusClass(insight.status)"
+                    x-text="insight.status || 'Lead'"
+                  ></span>
+                </div>
+
+                <!-- Signal Strength -->
+                <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Signal Strength</span>
+                  <span class="text-xl tracking-wider text-brand font-mono" x-text="renderSignalDots(insight.signal_strength)"></span>
+                  <span class="text-sm text-gray-500" x-text="insight.signal_strength"></span>
+                </div>
+
+                <!-- What's Happening -->
+                <div>
+                  <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">What's happening</h4>
+                  <p class="text-sm text-gray-700 dark:text-gray-300" x-text="insight.summary || 'No summary available.'"></p>
+                  <template x-if="insight.blocker">
+                    <div class="mt-2 flex items-start gap-2 text-sm">
+                      <span class="shrink-0 px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 rounded text-xs font-semibold">BLOCKER</span>
+                      <span class="text-gray-600 dark:text-gray-400" x-text="insight.blocker"></span>
+                    </div>
+                  </template>
+                </div>
+
+                <!-- Critical Timing -->
+                <template x-if="insight.decision_expected || insight.window_closes">
+                  <div>
+                    <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Critical timing</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                      <template x-if="insight.decision_expected">
+                        <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                          <p class="text-xs text-blue-600 dark:text-blue-400 font-medium">Decision Expected</p>
+                          <p class="text-sm font-semibold text-gray-900 dark:text-white mt-0.5" x-text="insight.decision_expected"></p>
+                        </div>
+                      </template>
+                      <template x-if="insight.window_closes">
+                        <div class="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                          <p class="text-xs text-red-600 dark:text-red-400 font-medium">Window Closes</p>
+                          <p class="text-sm font-semibold text-gray-900 dark:text-white mt-0.5" x-text="insight.window_closes"></p>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- What to Do -->
+                <div>
+                  <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">What to do</h4>
+                  <div class="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border-l-4 border-green-500">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white" x-text="insight.next_action || 'Follow up soon'"></p>
+                    <template x-if="insight.next_action_date">
+                      <p class="text-xs text-green-600 dark:text-green-400 mt-1">
+                        <span class="font-semibold">By:</span> <span x-text="insight.next_action_date"></span>
+                      </p>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Why This Matters -->
+                <template x-if="insight.reasoning">
+                  <div>
+                    <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Why this matters</h4>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 italic" x-text="insight.reasoning"></p>
+                  </div>
+                </template>
+
+                <!-- Signal Factors -->
+                <template x-if="insight.signal_factors && insight.signal_factors.length > 0">
+                  <div>
+                    <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Key signals</h4>
+                    <div class="flex flex-wrap gap-2">
+                      <template x-for="factor in insight.signal_factors" :key="factor">
+                        <span class="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded text-xs" x-text="factor"></span>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- Action Buttons -->
+                <div class="pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-wrap gap-3">
+                  <button
+                    @click="setReminder()"
+                    class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition"
+                  >
+                    <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                    Set Reminder
+                  </button>
+                  <button
+                    @click="draftFollowUp()"
+                    class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition"
+                  >
+                    <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    Draft Follow-up Email
+                  </button>
+                  <button
+                    @click="saveContact()"
+                    class="inline-flex items-center gap-2 px-4 py-2 bg-brand hover:bg-brand-dark text-white rounded-lg text-sm font-medium transition"
+                  >
+                    <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                    Save Contact
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          </template>
+
+          <!-- Empty State / Start -->
+          <template x-if="!insight && !loading && !error">
+            <div class="text-center py-12 text-gray-400">
+              <svg viewBox="0 0 24 24" class="w-16 h-16 mx-auto mb-4 opacity-40" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+              <p class="text-sm">Paste a conversation above and click <strong>Analyze with AI</strong> to get started.</p>
+            </div>
+          </template>
+
+        </div>
       </div>
 
     </main>
