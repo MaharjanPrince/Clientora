@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from database import Base, engine
 from routers import auth, contacts, deals, dashboard, conversations
 
-# Tables are managed by Alembic migrations now (see migrations/), not created
-# automatically here. Run `alembic upgrade head` after deploying.
+Base.metadata.create_all(bind=engine)
 app = FastAPI()
 
 app.add_middleware(
