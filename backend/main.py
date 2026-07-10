@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from database import Base, engine
 from routers import auth, contacts, deals, dashboard, conversations
 
-Base.metadata.create_all(bind=engine)
+# Tables are managed by Alembic migrations now (see migrations/), not created
+# automatically here. Run `alembic upgrade head` after deploying.
 app = FastAPI()
 
 app.add_middleware(
@@ -12,6 +12,7 @@ app.add_middleware(
         "https://venerable-kitsune-52fb64.netlify.app",
         "https://clientora.netlify.app",
         "http://localhost:3000",
+        "http://127.0.0.1:3000",
     ],
     allow_credentials=True,
     allow_methods=["*"],
